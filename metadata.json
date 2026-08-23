@@ -1,0 +1,6 @@
+{
+  "name": "Aurbana — Fresh Produce Digital Identity",
+  "description": "A digital identity and traceability platform for fresh produce with instant QR code generation, farm journey verification, and public product inspection.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

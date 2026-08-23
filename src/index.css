@@ -1,0 +1,179 @@
+@import "tailwindcss";
+
+:root {
+  --primary: #2E7D32;
+  --primary-hover: #256628;
+  --dark: #123524;
+  --light-bg: #EAF6EC;
+  --accent: #8BC34A;
+  --bg: #F8FAF8;
+  --text: #172117;
+  --muted: #566456;
+  --border-light: rgba(46, 125, 50, 0.12);
+  --card-shadow: 0 4px 20px -2px rgba(18, 53, 36, 0.06), 0 2px 6px -1px rgba(18, 53, 36, 0.04);
+  --card-shadow-hover: 0 10px 28px -4px rgba(18, 53, 36, 0.12), 0 4px 10px -2px rgba(18, 53, 36, 0.06);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Polished Card Utility */
+.card-polish {
+  background-color: #ffffff;
+  border-radius: 20px;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--card-shadow);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-polish:hover {
+  box-shadow: var(--card-shadow-hover);
+  transform: translateY(-2px);
+}
+
+/* Polished Input Utility */
+.input-polish {
+  background-color: #ffffff;
+  border: 1.5px solid rgba(46, 125, 50, 0.18);
+  border-radius: 12px;
+  padding: 11px 16px;
+  width: 100%;
+  color: var(--text);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.input-polish:focus {
+  border-color: var(--primary);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.18);
+}
+
+.input-polish::placeholder {
+  color: #8da18e;
+}
+
+/* Polished Primary Button */
+.btn-primary-polish {
+  background-color: var(--primary);
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(46, 125, 50, 0.25);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-primary-polish:hover {
+  background-color: var(--primary-hover);
+  box-shadow: 0 6px 20px rgba(46, 125, 50, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-primary-polish:active {
+  transform: translateY(0);
+}
+
+/* Polished Secondary / Outline Button */
+.btn-secondary-polish {
+  background-color: #ffffff;
+  color: var(--dark);
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-weight: 700;
+  border: 1.5px solid rgba(46, 125, 50, 0.2);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-secondary-polish:hover {
+  background-color: var(--light-bg);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* Polished Light Badge */
+.badge-mint {
+  background-color: var(--light-bg);
+  color: var(--primary);
+  border: 1px solid rgba(46, 125, 50, 0.2);
+  border-radius: 9999px;
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Laser Scanner Animation */
+@keyframes scanLaser {
+  0% {
+    top: 5%;
+    opacity: 0.8;
+  }
+  50% {
+    top: 92%;
+    opacity: 1;
+  }
+  100% {
+    top: 5%;
+    opacity: 0.8;
+  }
+}
+
+.animate-scan-laser {
+  animation: scanLaser 2.2s ease-in-out infinite;
+}
+
+/* Ambient Pulse Glow */
+@keyframes ambientPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.85;
+  }
+}
+
+.animate-ambient-pulse {
+  animation: ambientPulse 4s ease-in-out infinite;
+}
+
+/* Shimmer Highlight */
+@keyframes shimmerPass {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer-active {
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+  background-size: 200% 100%;
+  animation: shimmerPass 2.5s infinite;
+}
+
+
