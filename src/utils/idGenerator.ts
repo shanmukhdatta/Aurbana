@@ -27,5 +27,5 @@ export function getPublicProduceUrl(produceId: string): string {
     const origin = window.location.origin.replace(/\/+$/, '');
     return `${origin}/p/${encodeURIComponent(cleanId)}`;
   }
-  return `https://aurbana.app/p/${encodeURIComponent(cleanId)}`;
+  return `https://aurbana.vercel.app/p/${encodeURIComponent(cleanId)}`;
 }

@@ -1,5 +1,11 @@
 # 🌿 Aurbana — Fresh Produce Digital Identity Platform
 
+[![Live Vercel Demo](https://img.shields.io/badge/Vercel-Deployed-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://aurbana.vercel.app/)
+[![Build Status](https://img.shields.io/badge/Build-Passing-2E7D32?style=for-the-badge&logo=github)](https://github.com/shanmukhdatta/Aurbana)
+
+> 🌐 **Live Vercel Web Application**: [https://aurbana.vercel.app/](https://aurbana.vercel.app/)  
+> 📄 **Live Digital Passport Example**: [https://aurbana.vercel.app/p/AUR-2026-TOM-8F42K](https://aurbana.vercel.app/p/AUR-2026-TOM-8F42K)
+>
 > **Production-Grade AgriTech Supply Chain Transparency System**
 >
 > Give every harvest batch a verified digital identity. Track fresh produce from farm gate to customer kitchen table using dynamically generated, ISO-compliant scannable QR tags and real-time ledger search.
