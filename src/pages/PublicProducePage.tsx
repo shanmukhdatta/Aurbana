@@ -39,6 +39,8 @@ import { generateQRCodeDataUrl } from '../utils/qrHelper';
 import { getPublicProduceUrl } from '../utils/idGenerator';
 import { playSuccessChime } from '../utils/audio';
 
+import { ExportCertificateModal } from '../components/ExportCertificateModal';
+
 interface PublicProducePageProps {
   produceId: string;
   navigate: (route: string) => void;
@@ -54,6 +56,7 @@ export const PublicProducePage: React.FC<PublicProducePageProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [qrUrl, setQrUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
+  const [showCertificateModal, setShowCertificateModal] = useState(false);
   const [allAvailable, setAllAvailable] = useState<ProduceRecord[]>([]);
   const [activeTab, setActiveTab] = useState<'passport' | 'journey' | 'lab' | 'farmer' | 'recipes'>('passport');
   const [verifiedSeal, setVerifiedSeal] = useState(false);
@@ -270,18 +273,28 @@ export const PublicProducePage: React.FC<PublicProducePageProps> = ({
 
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setShowCertificateModal(true)}
+              id="export-pdf-certificate-btn"
+              className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl bg-[#2E7D32] text-white hover:bg-[#123524] shadow-xs transition-all cursor-pointer"
+            >
+              <FileCheck className="w-3.5 h-3.5 text-[#8BC34A]" />
+              <span>Export PDF Certificate</span>
+            </button>
+
+            <button
               onClick={handleShare}
-              className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-[#EAF6EC] hover:text-[#2E7D32] shadow-xs transition-all"
+              className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-[#EAF6EC] hover:text-[#2E7D32] shadow-xs transition-all cursor-pointer"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
               <span>{copied ? 'Copied' : 'Share'}</span>
             </button>
+
             <button
               onClick={() => onPrint(record)}
-              className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-[#EAF6EC] hover:text-[#2E7D32] shadow-xs transition-all"
+              className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-[#EAF6EC] hover:text-[#2E7D32] shadow-xs transition-all cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5 text-[#2E7D32]" />
-              <span>Print Label</span>
+              <span>Print Tag</span>
             </button>
           </div>
         </div>
@@ -832,6 +845,15 @@ export const PublicProducePage: React.FC<PublicProducePageProps> = ({
             Explore Aurbana Network
           </button>
         </div>
+
+        {/* Certificate Export Modal */}
+        {showCertificateModal && (
+          <ExportCertificateModal
+            record={record}
+            qrUrl={qrUrl}
+            onClose={() => setShowCertificateModal(false)}
+          />
+        )}
 
       </div>
     </div>
