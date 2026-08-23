@@ -77,8 +77,8 @@
     "image_url": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=800&auto=format&fit=crop&q=80",
     "status": "Active",
     "created_at": "2026-08-23T20:00:58.771Z",
-    "updated_at": "2026-08-23T20:25:48.403Z",
-    "scan_count": 6,
+    "updated_at": "2026-08-23T20:30:20.991Z",
+    "scan_count": 9,
     "grade": "Standard",
     "shelf_life_days": 25,
     "journey": [
@@ -132,8 +132,8 @@
     "image_url": "https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=800&auto=format&fit=crop&q=80",
     "status": "Active",
     "created_at": "2026-08-23T19:52:33.573Z",
-    "updated_at": "2026-08-23T20:25:48.402Z",
-    "scan_count": 15,
+    "updated_at": "2026-08-23T20:30:20.921Z",
+    "scan_count": 18,
     "journey": []
   },
   {
@@ -723,7 +723,7 @@
         "title": "Registered with Aurbana",
         "date": "22 Aug 2026, 02:40 PM",
         "location": "Aurbana Agri-Facility North 1",
-        "handler": "Kavita Sharma (Quality Officer)",
+        "handler": "Shanmukh Datta (Quality Officer)",
         "notes": "Digital identity generated. Thermal QR crate tags applied.",
         "status": "completed"
       },
@@ -1023,7 +1023,7 @@
         "title": "Registered with Aurbana",
         "date": "23 Aug 2026, 06:45 AM",
         "location": "Aurbana Express Transit Depot",
-        "handler": "Kavita Sharma",
+        "handler": "Shanmukh Datta",
         "notes": "Registered within 2 hours of harvest.",
         "status": "completed"
       },

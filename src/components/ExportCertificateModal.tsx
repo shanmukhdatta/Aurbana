@@ -260,7 +260,7 @@ export const ExportCertificateModal: React.FC<ExportCertificateModalProps> = ({
               <div className="flex items-center gap-8 text-center sm:text-right">
                 <div className="space-y-1">
                   <div className="w-28 h-12 border-b-2 border-gray-400 mx-auto sm:ml-auto flex items-end justify-center pb-1">
-                    <span className="font-serif italic text-sm text-[#123524] font-bold">Kavita Sharma</span>
+                    <span className="font-serif italic text-sm text-[#123524] font-bold">Shanmukh Datta</span>
                   </div>
                   <span className="text-[10px] font-bold text-gray-500 uppercase block">
                     Chief Quality Inspector

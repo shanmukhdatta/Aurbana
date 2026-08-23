@@ -48,7 +48,7 @@ export const INITIAL_PRODUCE_RECORDS: ProduceRecord[] = [
         title: 'Registered with Aurbana',
         date: '22 Aug 2026, 02:40 PM',
         location: 'Aurbana Agri-Facility North 1',
-        handler: 'Kavita Sharma (Quality Officer)',
+        handler: 'Shanmukh Datta (Quality Officer)',
         notes: 'Digital identity generated. Thermal QR crate tags applied.',
         status: 'completed'
       },
@@ -489,9 +489,9 @@ export const MOCK_FARMS: FarmPartner[] = [
 export const DEFAULT_USERS: UserSession[] = [
   {
     id: 'usr-1',
-    name: 'Kavita Sharma',
+    name: 'Shanmukh Datta',
     role: 'Quality Officer',
-    email: 'kavita.sharma@aurbana.com',
+    email: 'shanmukh.datta@aurbana.com',
     facility: 'Aurbana Hub North 1 (Ludhiana)',
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80'
   },
