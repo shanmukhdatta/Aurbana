@@ -40,6 +40,7 @@ import { getPublicProduceUrl } from '../utils/idGenerator';
 import { playSuccessChime } from '../utils/audio';
 
 import { ExportCertificateModal } from '../components/ExportCertificateModal';
+import { downloadProduceCertificatePdf } from '../utils/pdfGenerator';
 
 interface PublicProducePageProps {
   produceId: string;
@@ -58,12 +59,25 @@ export const PublicProducePage: React.FC<PublicProducePageProps> = ({
   const [copied, setCopied] = useState(false);
   const [showCertificateModal, setShowCertificateModal] = useState(false);
   const [allAvailable, setAllAvailable] = useState<ProduceRecord[]>([]);
-  const [activeTab, setActiveTab] = useState<'passport' | 'journey' | 'lab' | 'farmer' | 'recipes'>('passport');
+  const [activeTab, setActiveTab] = useState<'passport' | 'journey' | 'certificate' | 'lab' | 'farmer' | 'recipes'>('passport');
   const [verifiedSeal, setVerifiedSeal] = useState(false);
   const [userRating, setUserRating] = useState(5);
   const [hasRated, setHasRated] = useState(false);
   const [likesCount, setLikesCount] = useState(42);
   const [hasLiked, setHasLiked] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (!record) return;
+    try {
+      setIsDownloadingPdf(true);
+      await downloadProduceCertificatePdf(record, qrUrl);
+    } catch (err) {
+      console.error('Failed to download PDF certificate:', err);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -273,17 +287,31 @@ export const PublicProducePage: React.FC<PublicProducePageProps> = ({
 
           <div className="flex items-center gap-2">
             <button
+              onClick={handleDownloadPdf}
+              id="download-pdf-top-btn"
+              disabled={isDownloadingPdf}
+              className="flex items-center gap-1.5 text-xs font-black px-3.5 py-2 rounded-xl bg-[#2E7D32] text-white hover:bg-[#123524] shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            >
+              {isDownloadingPdf ? (
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5 text-[#8BC34A]" />
+              )}
+              <span>{isDownloadingPdf ? 'Generating...' : 'Download PDF'}</span>
+            </button>
+
+            <button
               onClick={() => setShowCertificateModal(true)}
               id="export-pdf-certificate-btn"
-              className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl bg-[#2E7D32] text-white hover:bg-[#123524] shadow-xs transition-all cursor-pointer"
+              className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-[#EAF6EC] hover:text-[#2E7D32] shadow-xs transition-all cursor-pointer"
             >
-              <FileCheck className="w-3.5 h-3.5 text-[#8BC34A]" />
-              <span>Export PDF Certificate</span>
+              <FileCheck className="w-3.5 h-3.5 text-[#2E7D32]" />
+              <span>View PDF</span>
             </button>
 
             <button
               onClick={handleShare}
-              className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-[#EAF6EC] hover:text-[#2E7D32] shadow-xs transition-all cursor-pointer"
+              className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-[#EAF6EC] hover:text-[#2E7D32] shadow-xs transition-all cursor-pointer"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
               <span>{copied ? 'Copied' : 'Share'}</span>
@@ -291,10 +319,10 @@ export const PublicProducePage: React.FC<PublicProducePageProps> = ({
 
             <button
               onClick={() => onPrint(record)}
-              className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-[#EAF6EC] hover:text-[#2E7D32] shadow-xs transition-all cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-[#EAF6EC] hover:text-[#2E7D32] shadow-xs transition-all cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5 text-[#2E7D32]" />
-              <span>Print Tag</span>
+              <span>Print</span>
             </button>
           </div>
         </div>
@@ -401,6 +429,7 @@ export const PublicProducePage: React.FC<PublicProducePageProps> = ({
           <div className="flex border-b border-gray-100 bg-[#F8FAF8] px-3 pt-3 gap-1 overflow-x-auto no-scrollbar">
             {[
               { id: 'passport', label: 'Passport', icon: FileCheck },
+              { id: 'certificate', label: 'PDF Certificate', icon: Award },
               { id: 'journey', label: 'Timeline', icon: Clock },
               { id: 'lab', label: 'Lab & Freshness', icon: Droplets },
               { id: 'farmer', label: 'Grower', icon: User },
@@ -412,7 +441,7 @@ export const PublicProducePage: React.FC<PublicProducePageProps> = ({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-t-xl text-xs font-bold whitespace-nowrap transition-all ${
+                  className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-t-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                     isActive
                       ? 'bg-white text-[#2E7D32] border-t-2 border-[#2E7D32] shadow-xs'
                       : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
@@ -515,6 +544,48 @@ export const PublicProducePage: React.FC<PublicProducePageProps> = ({
                   )}
                 </div>
 
+                {/* PDF Certificate Document Card */}
+                <div className="p-5 rounded-2xl bg-linear-to-r from-[#123524] via-[#1b4832] to-[#2E7D32] text-white space-y-3 shadow-md">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-[#8BC34A] text-xs font-bold uppercase tracking-wider">
+                      <Award className="w-4 h-4" />
+                      <span>Official PDF Traceability Certificate</span>
+                    </div>
+                    <span className="text-[10px] font-mono bg-white/10 px-2 py-0.5 rounded text-white/90">
+                      CERT-{record.produce_id}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-white/85 leading-relaxed">
+                    Official ISO/IEC 18004 compliance certificate containing verified farm provenance, condition grade, batch numbers, and high-contrast scannable QR code.
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                    <button
+                      onClick={handleDownloadPdf}
+                      disabled={isDownloadingPdf}
+                      id="passport-download-pdf-btn"
+                      className="px-4 py-2.5 rounded-xl bg-[#8BC34A] hover:bg-[#7cb342] text-[#123524] text-xs font-black shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {isDownloadingPdf ? (
+                        <div className="w-3.5 h-3.5 border-2 border-[#123524] border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Download className="w-3.5 h-3.5" />
+                      )}
+                      <span>{isDownloadingPdf ? 'Generating PDF...' : 'Download Official PDF (.pdf)'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('certificate')}
+                      id="passport-preview-pdf-btn"
+                      className="px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <FileCheck className="w-3.5 h-3.5 text-[#8BC34A]" />
+                      <span>Preview Document Online</span>
+                    </button>
+                  </div>
+                </div>
+
                 {/* Batch Specifics Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div className="flex items-center justify-between p-3.5 rounded-xl bg-gray-50 border border-gray-100">
@@ -546,6 +617,158 @@ export const PublicProducePage: React.FC<PublicProducePageProps> = ({
                     </p>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* TAB: PDF CERTIFICATE PREVIEW & DOWNLOAD */}
+            {activeTab === 'certificate' && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                {/* Certificate Action Strip */}
+                <div className="p-4 rounded-2xl bg-[#EAF6EC] border border-[#2E7D32]/25 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-[#2E7D32] flex items-center justify-center text-white shrink-0">
+                      <Award className="w-5 h-5 text-[#8BC34A]" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-[#123524] uppercase tracking-wider">
+                        Official Produce Traceability Certificate (PDF)
+                      </h4>
+                      <p className="text-[11px] text-gray-600">
+                        Cryptographically verifiable ISO/IEC 18004 document
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      onClick={handleDownloadPdf}
+                      disabled={isDownloadingPdf}
+                      id="cert-tab-download-pdf-btn"
+                      className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-[#2E7D32] hover:bg-[#123524] text-white text-xs font-black shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {isDownloadingPdf ? (
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Download className="w-3.5 h-3.5 text-[#8BC34A]" />
+                      )}
+                      <span>{isDownloadingPdf ? 'Generating PDF...' : 'Download PDF'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => setShowCertificateModal(true)}
+                      className="px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Printer className="w-3.5 h-3.5 text-[#2E7D32]" />
+                      <span>Print</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Printable Document Preview Framing */}
+                <div className="border-4 border-[#123524] p-5 sm:p-7 rounded-2xl bg-linear-to-b from-[#F8FAF8] via-white to-[#F8FAF8] space-y-6 shadow-sm">
+                  {/* Header */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-gray-200 pb-5 text-center sm:text-left">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-[#123524] flex items-center justify-center text-[#8BC34A] shadow-sm shrink-0">
+                        <ShieldCheck className="w-7 h-7" />
+                      </div>
+                      <div>
+                        <div className="text-xl font-black text-[#123524] tracking-tight uppercase">
+                          AURBANA
+                        </div>
+                        <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#2E7D32]">
+                          Agri-Supply Chain Identity Registry
+                        </div>
+                        <div className="text-[9px] text-gray-500 font-medium">ISO/IEC 18004 Verified Traceability</div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs text-center sm:text-right">
+                      <div className="text-[9px] font-bold text-gray-400 uppercase">Certificate No</div>
+                      <div className="text-xs font-mono font-black text-[#123524]">CERT-{record.produce_id}</div>
+                      <div className="text-[10px] text-gray-500">Issued: {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                    </div>
+                  </div>
+
+                  {/* Body Specs */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs bg-white p-4 rounded-xl border border-gray-100">
+                    <div className="space-y-2">
+                      <div>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase block">Produce Item</span>
+                        <strong className="text-base font-black text-[#123524]">{record.produce_name}</strong>
+                        <span className="text-xs text-gray-600 block">{record.variety || record.category} ({record.category})</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase block">Digital Identity ID</span>
+                        <code className="text-xs font-mono font-bold text-[#2E7D32] bg-emerald-50 px-2 py-0.5 rounded">{record.produce_id}</code>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase block">Condition Grade</span>
+                        <strong className="text-gray-800">{record.grade || record.condition} • {record.age_days} Days Harvest Age</strong>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 sm:border-l sm:border-gray-100 sm:pl-4">
+                      <div>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase block">Cultivation Farm</span>
+                        <strong className="text-gray-900">{record.origin}</strong>
+                        <span className="text-[11px] text-gray-500 block">Lead Farmer: {record.farmer_name || 'Verified Partner'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase block">Batch Identification</span>
+                        <span className="font-mono text-gray-700">{record.batch_number || 'BATCH-PRIMARY'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase block">Transit & Storage</span>
+                        <span className="text-gray-700">{record.storage_location || 'Cold Chain Hub'} ({record.temp_celsius || 12}°C)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* QR & Verification Footing */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200">
+                    <div className="flex items-center gap-3">
+                      {qrUrl ? (
+                        <img src={qrUrl} alt="QR Code" className="w-16 h-16 border rounded-lg p-1 bg-white shadow-2xs" />
+                      ) : (
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <QrCode className="w-8 h-8 text-gray-400" />
+                        </div>
+                      )}
+                      <div className="text-left">
+                        <span className="text-[10px] font-bold text-[#2E7D32] uppercase block">Scannable Batch URL</span>
+                        <span className="text-[10px] font-mono text-gray-500 break-all">{getPublicProduceUrl(record.produce_id)}</span>
+                        <span className="text-[9px] text-gray-400 block pt-0.5">ISO/IEC 18004 Standard Verified</span>
+                      </div>
+                    </div>
+
+                    <div className="text-center sm:text-right space-y-1">
+                      <div className="font-serif italic text-xs text-[#123524] font-bold">Shanmukh Datta</div>
+                      <div className="text-[9px] font-bold text-gray-400 uppercase">Chief Quality Inspector</div>
+                      <div className="inline-flex items-center gap-1 text-[9px] font-extrabold text-[#2E7D32] bg-[#EAF6EC] px-2 py-0.5 rounded-full border border-[#2E7D32]/20">
+                        <ShieldCheck className="w-3 h-3" />
+                        <span>OFFICIALLY CERTIFIED</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Download CTA */}
+                <div>
+                  <button
+                    onClick={handleDownloadPdf}
+                    disabled={isDownloadingPdf}
+                    id="cert-tab-download-full-btn"
+                    className="w-full py-4 px-6 rounded-2xl bg-[#2E7D32] hover:bg-[#123524] text-white text-sm font-black shadow-lg shadow-[#2E7D32]/25 transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {isDownloadingPdf ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4 text-[#8BC34A]" />
+                    )}
+                    <span>{isDownloadingPdf ? 'Generating PDF Document...' : 'Download Official PDF Certificate (.pdf)'}</span>
+                  </button>
+                </div>
               </div>
             )}
 

@@ -93,7 +93,7 @@ async function startServer() {
 
     if (typeof queryId === 'string' && queryId.trim()) {
       const normalized = normalizeProduceId(queryId);
-      if (normalized.startsWith('AUR-')) {
+      if (normalized.startsWith('AUR-') || /^[A-Z]{3,4}-\d{8}-\d{4}/i.test(normalized)) {
         return res.redirect(302, `/p/${encodeURIComponent(normalized)}`);
       }
     }
@@ -138,10 +138,17 @@ async function startServer() {
     let index = findProduceIndex(produceRecords, targetId);
 
     if (index < 0) {
-      // If it follows Aurbana ID format (AUR-YYYY-CODE-TOKEN), auto-generate a passport record
-      if (targetId && targetId.startsWith('AUR-')) {
-        const parts = targetId.split('-');
-        const cropCode = parts[2] || 'PRD';
+      // If it follows Aurbana ID format (AUR-YYYY-CODE-TOKEN or CODE-YYYYMMDD-HHmm), auto-generate a passport record
+      const isAur = Boolean(targetId && targetId.startsWith('AUR-'));
+      const isNew = Boolean(targetId && /^[A-Z]{3,4}-\d{8}-\d{4}/i.test(targetId));
+
+      if (isAur || isNew) {
+        let cropCode = 'PRD';
+        if (isAur) {
+          cropCode = targetId.split('-')[2] || 'PRD';
+        } else if (isNew) {
+          cropCode = targetId.split('-')[0] || 'PRD';
+        }
         const cropNameMap: Record<string, string> = {
           STR: 'Strawberry',
           TOM: 'Tomato',
@@ -151,7 +158,16 @@ async function startServer() {
           BAN: 'Banana',
           SPN: 'Spinach',
           APP: 'Apple',
-          ORG: 'Orange'
+          ORG: 'Orange',
+          BEE: 'Beetroot',
+          BRO: 'Broccoli',
+          ONI: 'Onion',
+          CAU: 'Cauliflower',
+          CAP: 'Capsicum',
+          CUC: 'Cucumber',
+          GAR: 'Garlic',
+          GIN: 'Ginger',
+          MUS: 'Mushroom'
         };
         const produceName = cropNameMap[cropCode] || 'Fresh Harvest Produce';
 

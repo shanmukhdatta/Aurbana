@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   PlusCircle, 
   Sparkles, 
@@ -15,7 +15,13 @@ import {
   User, 
   Building2,
   FileText,
-  Upload
+  Upload,
+  Camera,
+  CameraOff,
+  FlipHorizontal,
+  Trash2,
+  CheckCircle2,
+  RefreshCw
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { ProduceRecord, ProduceCondition, ProduceCategory } from '../types';
@@ -39,6 +45,18 @@ export const CreateProducePage: React.FC<CreateProducePageProps> = ({ onSuccess,
   const [condition, setCondition] = useState<ProduceCondition>('Excellent');
   const [origin, setOrigin] = useState('Green Valley Farm, Punjab');
   
+  // Photo & Live Camera State (Mandatory)
+  const [imageUrl, setImageUrl] = useState('https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=800&auto=format&fit=crop&q=80');
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isCameraLoading, setIsCameraLoading] = useState(false);
+  const [cameraFacingMode, setCameraFacingMode] = useState<'environment' | 'user'>('environment');
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  
   // Expandable additional info
   const [showAdditional, setShowAdditional] = useState(false);
   const [supplierName, setSupplierName] = useState('Green Valley Agri-Cooperative');
@@ -57,7 +75,6 @@ export const CreateProducePage: React.FC<CreateProducePageProps> = ({ onSuccess,
   const [quantity, setQuantity] = useState('450 kg (18 crates)');
   const [storageLocation, setStorageLocation] = useState('Cold Zone A (12°C)');
   const [notes, setNotes] = useState('Firm texture, deep natural color, hand-picked in early morning mist.');
-  const [imageUrl, setImageUrl] = useState('https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=800&auto=format&fit=crop&q=80');
   
   // UI Errors & Loading
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -72,7 +89,145 @@ export const CreateProducePage: React.FC<CreateProducePageProps> = ({ onSuccess,
     if (errors.produceName) {
       setErrors(prev => ({ ...prev, produceName: '' }));
     }
+    if (errors.imageUrl) {
+      setErrors(prev => ({ ...prev, imageUrl: '' }));
+    }
   };
+
+  // Camera Management
+  const startCamera = async (facing: 'environment' | 'user' = cameraFacingMode) => {
+    setCameraError(null);
+    setIsCameraLoading(true);
+    setIsCameraOpen(true);
+
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraError('Camera access is not supported by your browser.');
+        setIsCameraLoading(false);
+        return;
+      }
+
+      // Clean previous stream if any
+      if (cameraStreamRef.current) {
+        cameraStreamRef.current.getTracks().forEach(t => t.stop());
+        cameraStreamRef.current = null;
+      }
+
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: facing },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
+
+      cameraStreamRef.current = stream;
+      setCameraFacingMode(facing);
+      setIsCameraLoading(false);
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute('playsinline', 'true');
+        videoRef.current.muted = true;
+        try {
+          await videoRef.current.play();
+        } catch (e) {
+          console.warn('Camera video play issue:', e);
+        }
+      }
+    } catch (err: any) {
+      console.warn('Camera permission / start error:', err);
+      setCameraError(err?.message || 'Unable to open camera. Please check camera permissions or upload a photo file.');
+      setIsCameraLoading(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach(t => t.stop());
+      cameraStreamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraOpen(false);
+    setIsCameraLoading(false);
+  };
+
+  const toggleCameraFacing = () => {
+    const nextMode = cameraFacingMode === 'environment' ? 'user' : 'environment';
+    startCamera(nextMode);
+  };
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+        setImageUrl(dataUrl);
+        if (errors.imageUrl) {
+          setErrors(prev => ({ ...prev, imageUrl: '' }));
+        }
+        stopCamera();
+      }
+    } catch (err) {
+      console.error('Error capturing snapshot:', err);
+      setCameraError('Failed to capture photo from camera.');
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setErrors(prev => ({ ...prev, imageUrl: 'Selected file is not an image.' }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (typeof event.target?.result === 'string') {
+        setImageUrl(event.target.result);
+        if (errors.imageUrl) {
+          setErrors(prev => ({ ...prev, imageUrl: '' }));
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Sync stream to video element when camera mounts
+  useEffect(() => {
+    if (isCameraOpen && videoRef.current && cameraStreamRef.current) {
+      if (videoRef.current.srcObject !== cameraStreamRef.current) {
+        videoRef.current.srcObject = cameraStreamRef.current;
+        videoRef.current.play().catch(console.warn);
+      }
+    }
+  }, [isCameraOpen]);
+
+  // Clean up stream on unmount
+  useEffect(() => {
+    return () => {
+      if (cameraStreamRef.current) {
+        cameraStreamRef.current.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, []);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -86,6 +241,10 @@ export const CreateProducePage: React.FC<CreateProducePageProps> = ({ onSuccess,
       newErrors.ageDays = 'Age must be 0 or a positive number';
     } else if (ageNum > 365) {
       newErrors.ageDays = 'Age exceeds realistic fresh produce shelf life';
+    }
+
+    if (!imageUrl || !imageUrl.trim()) {
+      newErrors.imageUrl = 'Produce photo is mandatory. Please capture a live photo with camera, upload an image file, or provide a photo URL.';
     }
 
     setErrors(newErrors);
@@ -356,7 +515,280 @@ export const CreateProducePage: React.FC<CreateProducePageProps> = ({ onSuccess,
           </div>
         </div>
 
-        {/* SECTION 2: Expandable Additional Information */}
+        {/* SECTION 2: Mandatory Produce Photo & Live Camera */}
+        <div className="space-y-6">
+          <div className="border-b border-gray-100 pb-3 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-[#123524] flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-[#EAF6EC] text-[#2E7D32] text-xs flex items-center justify-center font-bold">2</span>
+              <span>Produce Photo & Camera Verification</span>
+            </h2>
+            <span className="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+              <span>* Mandatory</span>
+            </span>
+          </div>
+
+          <p className="text-xs text-gray-600">
+            A verified crop photo is mandatory for identity issuance and QR verification. Snap a photo with your device camera, upload a photo file, or enter an image link.
+          </p>
+
+          {/* Camera Viewfinder Panel */}
+          {isCameraOpen && (
+            <div className="bg-slate-950 rounded-3xl p-4 sm:p-6 border-2 border-[#2E7D32] shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between text-white pb-2 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <Camera className="w-5 h-5 text-[#8BC34A] animate-pulse" />
+                  <span className="text-sm font-bold">Crop Camera Viewfinder</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleCameraFacing}
+                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center gap-1.5 transition-colors"
+                  >
+                    <FlipHorizontal className="w-4 h-4" />
+                    <span>Flip Camera</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={stopCamera}
+                    className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 text-xs font-bold flex items-center gap-1.5 transition-colors"
+                  >
+                    <CameraOff className="w-4 h-4" />
+                    <span>Close</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Viewfinder Frame */}
+              <div className="relative aspect-video max-h-[360px] w-full rounded-2xl overflow-hidden bg-black flex items-center justify-center border border-white/20 shadow-inner">
+                {isCameraLoading && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-10 text-white space-y-3">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8BC34A]" />
+                    <p className="text-xs font-medium text-gray-300">Connecting to camera device...</p>
+                  </div>
+                )}
+
+                {cameraError ? (
+                  <div className="p-6 text-center text-rose-300 space-y-3 max-w-md">
+                    <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
+                    <p className="text-sm font-bold text-white">Camera Check Notice</p>
+                    <p className="text-xs text-rose-200">{cameraError}</p>
+                    <div className="flex justify-center gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => startCamera(cameraFacingMode)}
+                        className="px-4 py-2 rounded-xl bg-[#2E7D32] hover:bg-[#123524] text-white text-xs font-bold flex items-center gap-1.5"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Retry Camera</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold flex items-center gap-1.5"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Upload File Instead</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover"
+                    />
+
+                    {/* Camera grid overlay */}
+                    <div className="absolute inset-0 pointer-events-none border border-white/10 grid grid-cols-3 grid-rows-3 opacity-25">
+                      <div className="border-r border-b border-white/20" />
+                      <div className="border-r border-b border-white/20" />
+                      <div className="border-b border-white/20" />
+                      <div className="border-r border-b border-white/20" />
+                      <div className="border-r border-b border-white/20" />
+                      <div className="border-b border-white/20" />
+                      <div className="border-r border-white/20" />
+                      <div className="border-r border-white/20" />
+                      <div />
+                    </div>
+
+                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-bold text-white flex items-center gap-1.5 border border-white/10">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                      <span>Camera Streaming Live</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Snap Button inside Camera */}
+              {!cameraError && (
+                <div className="flex items-center justify-center gap-4 pt-2">
+                  <button
+                    type="button"
+                    onClick={capturePhoto}
+                    id="capture-produce-photo-btn"
+                    className="px-8 py-3.5 rounded-2xl bg-[#2E7D32] hover:bg-[#8BC34A] hover:text-[#123524] text-white font-extrabold text-sm shadow-xl flex items-center gap-2.5 transition-all transform active:scale-95 cursor-pointer"
+                  >
+                    <Camera className="w-5 h-5" />
+                    <span>Snap Photo</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Photo Display Card & Selector Actions */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+            {/* Left Preview Card (5 cols) */}
+            <div className="md:col-span-5 space-y-3">
+              <div className={`relative aspect-square rounded-2xl overflow-hidden border-2 transition-all ${
+                imageUrl 
+                  ? 'border-[#2E7D32]/40 shadow-md bg-gray-50' 
+                  : errors.imageUrl 
+                  ? 'border-rose-400 bg-rose-50/50' 
+                  : 'border-dashed border-gray-300 bg-gray-50/70'
+              }`}>
+                {imageUrl ? (
+                  <>
+                    <img 
+                      src={imageUrl} 
+                      alt={produceName || 'Produce photo'} 
+                      className="w-full h-full object-cover"
+                      onError={() => {
+                        setCameraError('Failed to load image from URL. Please try capturing or uploading another photo.');
+                      }}
+                    />
+                    <div className="absolute top-3 right-3">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-600/95 backdrop-blur-md text-white text-[11px] font-bold shadow-md">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                        <span>Photo Attached</span>
+                      </span>
+                    </div>
+
+                    <div className="absolute bottom-3 inset-x-3 bg-black/70 backdrop-blur-md text-white p-2.5 rounded-xl text-xs flex items-center justify-between">
+                      <span className="font-bold truncate max-w-[160px]">{produceName || 'Produce Item'}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImageUrl('');
+                          stopCamera();
+                        }}
+                        className="text-rose-300 hover:text-rose-100 flex items-center gap-1 font-bold transition-colors cursor-pointer"
+                        title="Remove photo"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Clear</span>
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-gray-400 space-y-2">
+                    <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+                      <ImageIcon className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-gray-700">No Photo Attached</p>
+                      <p className="text-[11px] text-gray-400">Produce photo is mandatory to generate passport</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {errors.imageUrl && (
+                <p className="text-xs text-rose-600 flex items-center gap-1.5 font-medium bg-rose-50 p-2.5 rounded-xl border border-rose-200">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-500" />
+                  <span>{errors.imageUrl}</span>
+                </p>
+              )}
+            </div>
+
+            {/* Right Action Options (7 cols) */}
+            <div className="md:col-span-7 space-y-4">
+              <div className="bg-[#F8FAF8] rounded-2xl p-4 sm:p-5 border border-gray-200 space-y-3">
+                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
+                  Select Photo Method:
+                </label>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Button 1: Open Camera */}
+                  <button
+                    type="button"
+                    onClick={() => startCamera()}
+                    id="open-camera-produce-btn"
+                    className="p-3.5 rounded-xl bg-[#2E7D32] hover:bg-[#123524] text-white text-xs font-bold shadow-md shadow-[#2E7D32]/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Camera className="w-4 h-4 text-[#8BC34A]" />
+                    <span>{imageUrl ? 'Retake with Camera' : 'Take Photo (Camera)'}</span>
+                  </button>
+
+                  {/* Button 2: Upload Image File */}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    id="upload-produce-file-btn"
+                    className="p-3.5 rounded-xl bg-white hover:bg-gray-50 text-gray-800 text-xs font-bold border border-gray-300 shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Upload className="w-4 h-4 text-[#2E7D32]" />
+                    <span>Upload Image File</span>
+                  </button>
+                </div>
+
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+
+                {/* Toggleable URL input option */}
+                <div className="pt-2 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => setShowUrlInput(!showUrlInput)}
+                    className="text-xs font-bold text-[#2E7D32] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>{showUrlInput ? '− Hide Image URL Input' : '+ Or enter image URL directly'}</span>
+                  </button>
+
+                  {showUrlInput && (
+                    <div className="mt-2 space-y-2 animate-in fade-in duration-150">
+                      <input
+                        type="url"
+                        value={imageUrl}
+                        onChange={(e) => {
+                          setImageUrl(e.target.value);
+                          if (errors.imageUrl) {
+                            setErrors(prev => ({ ...prev, imageUrl: '' }));
+                          }
+                        }}
+                        placeholder="https://images.unsplash.com/..."
+                        className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-xs font-medium focus:ring-2 focus:ring-[#2E7D32] outline-none bg-white"
+                      />
+                      <p className="text-[11px] text-gray-500">
+                        Paste any public image URL (Unsplash, Cloudinary, AWS S3, etc.)
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Status Note */}
+              <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                <span>
+                  This photo is permanently linked to the produce digital passport and appears on retail QR scans.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 3: Expandable Additional Information */}
         <div className="border border-gray-200 rounded-2xl overflow-hidden transition-all">
           <button
             type="button"
@@ -509,20 +941,6 @@ export const CreateProducePage: React.FC<CreateProducePageProps> = ({ onSuccess,
                     className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm font-medium focus:ring-2 focus:ring-[#2E7D32] outline-none"
                   />
                 </div>
-
-                {/* Produce Image URL */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-700 uppercase">
-                    Produce Photo URL
-                  </label>
-                  <input
-                    type="url"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm font-medium focus:ring-2 focus:ring-[#2E7D32] outline-none"
-                  />
-                </div>
               </div>
 
               {/* Notes */}
@@ -547,10 +965,10 @@ export const CreateProducePage: React.FC<CreateProducePageProps> = ({ onSuccess,
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-[#2E7D32]" />
             <span>
-              Target Digital ID will follow format: <strong className="font-mono bg-white px-2 py-0.5 rounded border">AUR-2026-{produceName ? produceName.substring(0, 3).toUpperCase() : 'PRD'}-XXXXX</strong>
+              Target Digital ID will follow format: <strong className="font-mono bg-white px-2 py-0.5 rounded border text-[#123524]">{generateProduceId(produceName || 'Tomato')}</strong>
             </span>
           </div>
-          <span className="text-gray-500 font-medium">QR URL will be generated instantly</span>
+          <span className="text-gray-500 font-medium">Sequence: [VEG]-[YYYYMMDD]-[HHmm] (24h)</span>
         </div>
 
         {/* Submit Action */}

@@ -17,6 +17,8 @@ import {
 import { ProduceRecord } from '../types';
 import { getPublicProduceUrl } from '../utils/idGenerator';
 
+import { downloadProduceCertificatePdf } from '../utils/pdfGenerator';
+
 interface ExportCertificateModalProps {
   record: ProduceRecord;
   qrUrl: string;
@@ -29,9 +31,21 @@ export const ExportCertificateModal: React.FC<ExportCertificateModalProps> = ({
   onClose,
 }) => {
   const certificateRef = useRef<HTMLDivElement>(null);
+  const [isDownloading, setIsDownloading] = React.useState(false);
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadPdf = async () => {
+    try {
+      setIsDownloading(true);
+      await downloadProduceCertificatePdf(record, qrUrl);
+    } catch (err) {
+      console.error('Failed to download PDF:', err);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const passportUrl = getPublicProduceUrl(record.produce_id);
@@ -42,9 +56,9 @@ export const ExportCertificateModal: React.FC<ExportCertificateModalProps> = ({
       <div className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 my-8">
         
         {/* Modal Action Header (Screen only) */}
-        <div className="no-print p-4 sm:p-6 bg-[#123524] text-white flex items-center justify-between border-b border-white/10">
+        <div className="no-print p-4 sm:p-6 bg-[#123524] text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#2E7D32] flex items-center justify-center text-white">
+            <div className="w-10 h-10 rounded-2xl bg-[#2E7D32] flex items-center justify-center text-white flex-shrink-0">
               <FileCheck className="w-5 h-5" />
             </div>
             <div>
@@ -59,17 +73,32 @@ export const ExportCertificateModal: React.FC<ExportCertificateModalProps> = ({
 
           <div className="flex items-center gap-2">
             <button
+              onClick={handleDownloadPdf}
+              id="download-certificate-pdf-btn"
+              disabled={isDownloading}
+              className="px-4 py-2.5 rounded-xl bg-[#8BC34A] hover:bg-[#7cb342] text-[#123524] text-xs font-black transition-all flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
+            >
+              {isDownloading ? (
+                <div className="w-4 h-4 border-2 border-[#123524] border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              <span>{isDownloading ? 'Generating PDF...' : 'Download PDF'}</span>
+            </button>
+
+            <button
               onClick={handlePrint}
               id="print-certificate-btn"
-              className="px-4 py-2 rounded-xl bg-[#8BC34A] hover:bg-[#7cb342] text-[#123524] text-xs font-black transition-all flex items-center gap-2 shadow-md cursor-pointer"
+              className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <Printer className="w-4 h-4" />
-              <span>Print / Save PDF Certificate</span>
+              <span>Print</span>
             </button>
 
             <button
               onClick={onClose}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer ml-1"
+              aria-label="Close"
             >
               <X className="w-5 h-5" />
             </button>

@@ -245,7 +245,7 @@ export const ScanPage: React.FC<ScanPageProps> = ({ navigate }) => {
     setManualError('');
     const raw = manualId.trim();
     if (!raw) {
-      setManualError('Please enter a valid Aurbana ID or product name (e.g. AUR-2026-TOM-8F42K or Tomato)');
+      setManualError('Please enter a valid Aurbana ID or product name (e.g. TOM-20260829-1223 or Tomato)');
       return;
     }
 
@@ -265,7 +265,7 @@ export const ScanPage: React.FC<ScanPageProps> = ({ navigate }) => {
       return;
     }
 
-    if (cleanId && cleanId.startsWith('AUR-')) {
+    if (cleanId && (cleanId.startsWith('AUR-') || /^[A-Z]{3,4}-\d{8}-\d{4}/i.test(cleanId))) {
       navigate(`/p/${cleanId}`);
       return;
     }
@@ -403,7 +403,7 @@ export const ScanPage: React.FC<ScanPageProps> = ({ navigate }) => {
                   setManualId(e.target.value);
                   setManualError('');
                 }}
-                placeholder="e.g. AUR-2026-TOM-8F42K"
+                placeholder="e.g. TOM-20260829-1223"
                 className="w-full pl-4 pr-4 py-3 rounded-xl border border-gray-300 font-mono text-sm font-bold uppercase focus:ring-2 focus:ring-[#2E7D32] outline-none"
               />
             </div>

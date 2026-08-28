@@ -2,22 +2,25 @@
  * Shared produce ID normalization for URLs, QR payloads, and API lookups.
  * Handles raw IDs, full URLs, query params (?p=), and /p/ path segments.
  */
+// Pattern supporting new format (e.g. TOM-20260829-1223) and legacy format (AUR-2026-TOM-8F42K)
+const PRODUCE_ID_REGEX = /(?:AUR-\d{4}-[A-Z0-9]+-[A-Z0-9]+|[A-Z]{3,4}-\d{8}-\d{4}(?:-\d+)?)/i;
+
 export function normalizeProduceId(raw: string): string {
   if (!raw) return '';
 
   let cleaned = decodeURIComponent(raw).trim().toUpperCase();
 
-  // Direct Aurbana ID anywhere in the string (AUR-YYYY-CODE-TOKEN)
-  const aurMatch = cleaned.match(/AUR-\d{4}-[A-Z0-9]+-[A-Z0-9]+/i);
-  if (aurMatch) {
-    return aurMatch[0].toUpperCase();
+  // Direct produce ID anywhere in the string
+  const directMatch = cleaned.match(PRODUCE_ID_REGEX);
+  if (directMatch) {
+    return directMatch[0].toUpperCase();
   }
 
   // Query parameter (?p=... or &produceId=...)
   const queryMatch = cleaned.match(/[?&](?:P|PRODUCEID|ID|BATCH|SCAN)=([^&#\s]+)/i);
   if (queryMatch?.[1]) {
     cleaned = queryMatch[1].trim();
-    const nested = cleaned.match(/AUR-\d{4}-[A-Z0-9]+-[A-Z0-9]+/i);
+    const nested = cleaned.match(PRODUCE_ID_REGEX);
     if (nested) return nested[0].toUpperCase();
   }
 
@@ -25,7 +28,7 @@ export function normalizeProduceId(raw: string): string {
   const pathMatch = cleaned.match(/\/(?:P|PRODUCE)\/([^/?#&\s]+)/i);
   if (pathMatch?.[1]) {
     cleaned = pathMatch[1].trim();
-    const nested = cleaned.match(/AUR-\d{4}-[A-Z0-9]+-[A-Z0-9]+/i);
+    const nested = cleaned.match(PRODUCE_ID_REGEX);
     if (nested) return nested[0].toUpperCase();
   }
 

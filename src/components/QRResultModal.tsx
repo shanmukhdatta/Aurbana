@@ -10,11 +10,13 @@ import {
   ShieldCheck, 
   Sparkles,
   QrCode,
-  Share2
+  Share2,
+  FileCheck
 } from 'lucide-react';
 import { ProduceRecord } from '../types';
 import { generateQRCodeDataUrl, generateQRCodeSvg, downloadDataUrl, downloadSvg } from '../utils/qrHelper';
 import { getPublicProduceUrl } from '../utils/idGenerator';
+import { downloadProduceCertificatePdf } from '../utils/pdfGenerator';
 import { ConditionBadge } from './ConditionBadge';
 
 interface QRResultModalProps {
@@ -40,6 +42,18 @@ export const QRResultModal: React.FC<QRResultModalProps> = ({
   const [qrSvg, setQrSvg] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    try {
+      setIsDownloadingPdf(true);
+      await downloadProduceCertificatePdf(produce, qrDataUrl);
+    } catch (err) {
+      console.error('Failed to download certificate PDF:', err);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   const publicUrl = getPublicProduceUrl(produce.produce_id);
 
@@ -235,33 +249,51 @@ export const QRResultModal: React.FC<QRResultModalProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            <button
-              onClick={handleDownloadPng}
-              id="qr-download-png-btn"
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-xs"
-            >
-              <Download className="w-4 h-4 text-[#2E7D32]" />
-              <span>Download QR</span>
-            </button>
+          <div className="space-y-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button
+                onClick={handleDownloadPdf}
+                id="qr-download-pdf-btn"
+                disabled={isDownloadingPdf}
+                className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-[#2E7D32] hover:bg-[#123524] text-white text-sm font-black shadow-md shadow-[#2E7D32]/25 hover:shadow-lg transition-all cursor-pointer disabled:opacity-50"
+              >
+                {isDownloadingPdf ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <FileCheck className="w-4 h-4 text-[#8BC34A]" />
+                )}
+                <span>{isDownloadingPdf ? 'Generating PDF...' : 'Download PDF Certificate'}</span>
+              </button>
 
-            <button
-              onClick={() => onPrint(produce)}
-              id="qr-print-label-btn"
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-xs"
-            >
-              <Printer className="w-4 h-4 text-[#2E7D32]" />
-              <span>Print Label</span>
-            </button>
+              <button
+                onClick={handleViewPublic}
+                id="qr-view-public-btn"
+                className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-[#123524] hover:bg-[#1b4d35] text-white text-sm font-bold shadow-sm transition-all cursor-pointer"
+              >
+                <span>View Product Page</span>
+                <ExternalLink className="w-4 h-4 text-[#8BC34A]" />
+              </button>
+            </div>
 
-            <button
-              onClick={handleViewPublic}
-              id="qr-view-public-btn"
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#2E7D32] text-white text-sm font-bold hover:bg-[#123524] transition-all shadow-sm"
-            >
-              <span>View Public Page</span>
-              <ExternalLink className="w-4 h-4" />
-            </button>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                onClick={handleDownloadPng}
+                id="qr-download-png-btn"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-xs font-bold text-gray-800 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-xs cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5 text-[#2E7D32]" />
+                <span>Download QR</span>
+              </button>
+
+              <button
+                onClick={() => onPrint(produce)}
+                id="qr-print-label-btn"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-xs font-bold text-gray-800 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-xs cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5 text-[#2E7D32]" />
+                <span>Print Label Tag</span>
+              </button>
+            </div>
           </div>
 
           {/* Create another button */}

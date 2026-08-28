@@ -116,10 +116,17 @@ app.get('/api/produce/:id', (req, res) => {
   let index = findProduceIndex(records, targetId);
 
   if (index < 0) {
-    // Auto-generate passport if valid AUR- ID
-    if (targetId && targetId.startsWith('AUR-')) {
-      const parts = targetId.split('-');
-      const cropCode = parts[2] || 'PRD';
+    // Auto-generate passport if valid ID (AUR-YYYY-CODE-TOKEN or CODE-YYYYMMDD-HHmm)
+    const isAur = Boolean(targetId && targetId.startsWith('AUR-'));
+    const isNew = Boolean(targetId && /^[A-Z]{3,4}-\d{8}-\d{4}/i.test(targetId));
+
+    if (isAur || isNew) {
+      let cropCode = 'PRD';
+      if (isAur) {
+        cropCode = targetId.split('-')[2] || 'PRD';
+      } else if (isNew) {
+        cropCode = targetId.split('-')[0] || 'PRD';
+      }
       const cropNameMap: Record<string, string> = {
         STR: 'Strawberry',
         TOM: 'Tomato',
@@ -129,7 +136,16 @@ app.get('/api/produce/:id', (req, res) => {
         BAN: 'Banana',
         SPN: 'Spinach',
         APP: 'Apple',
-        ORG: 'Orange'
+        ORG: 'Orange',
+        BEE: 'Beetroot',
+        BRO: 'Broccoli',
+        ONI: 'Onion',
+        CAU: 'Cauliflower',
+        CAP: 'Capsicum',
+        CUC: 'Cucumber',
+        GAR: 'Garlic',
+        GIN: 'Ginger',
+        MUS: 'Mushroom'
       };
       const produceName = cropNameMap[cropCode] || 'Fresh Harvest Produce';
 

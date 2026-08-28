@@ -47,9 +47,9 @@ function getInitialRoute(): string {
         const id = hash.replace('p/', '').split('?')[0];
         return `/p/${ProduceStorageService.normalizeId(id)}`;
       }
-      const aurMatch = hash.match(/AUR-\d{4}-[A-Z0-9]+-[A-Z0-9]+/i);
-      if (aurMatch) {
-        return `/p/${aurMatch[0].toUpperCase()}`;
+      const idMatch = hash.match(/(?:AUR-\d{4}-[A-Z0-9]+-[A-Z0-9]+|[A-Z]{3,4}-\d{8}-\d{4}(?:-\d+)?)/i);
+      if (idMatch) {
+        return `/p/${idMatch[0].toUpperCase()}`;
       }
       if (hash.startsWith('/')) {
         return hash;
@@ -60,16 +60,16 @@ function getInitialRoute(): string {
     // ignore
   }
 
-  // 3. Check pathname (e.g. /p/AUR-2026-TOM-8F42K or /produce/AUR-...)
+  // 3. Check pathname (e.g. /p/TOM-20260829-1223 or /p/AUR-...)
   const path = window.location.pathname;
   if (path && path !== '/') {
     const pMatch = path.match(/\/p\/([^\/\?\#]+)/i) || path.match(/\/produce\/([^\/\?\#]+)/i);
     if (pMatch && pMatch[1]) {
       return `/p/${ProduceStorageService.normalizeId(pMatch[1])}`;
     }
-    const aurMatch = path.match(/AUR-\d{4}-[A-Z0-9]+-[A-Z0-9]+/i);
-    if (aurMatch) {
-      return `/p/${aurMatch[0].toUpperCase()}`;
+    const idMatch = path.match(/(?:AUR-\d{4}-[A-Z0-9]+-[A-Z0-9]+|[A-Z]{3,4}-\d{8}-\d{4}(?:-\d+)?)/i);
+    if (idMatch) {
+      return `/p/${idMatch[0].toUpperCase()}`;
     }
     return path;
   }
