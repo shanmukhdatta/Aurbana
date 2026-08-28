@@ -12,7 +12,8 @@ import {
   LogOut, 
   ShieldCheck, 
   Building2,
-  ScanLine
+  ScanLine,
+  Sparkles
 } from 'lucide-react';
 import { UserSession } from '../types';
 
@@ -67,7 +68,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => handleNav('/')}
               id="nav-home-btn"
-              className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors ${
+              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
                 currentRoute === '/' 
                   ? 'text-[#123524] bg-[#EAF6EC]' 
                   : 'text-gray-600 hover:text-[#123524] hover:bg-gray-50'
@@ -78,7 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => handleNav('/how-it-works')}
               id="nav-howitworks-btn"
-              className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors ${
+              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
                 currentRoute === '/how-it-works' 
                   ? 'text-[#123524] bg-[#EAF6EC]' 
                   : 'text-gray-600 hover:text-[#123524] hover:bg-gray-50'
@@ -89,7 +90,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => handleNav('/farms')}
               id="nav-farms-btn"
-              className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors ${
+              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
                 currentRoute === '/farms' 
                   ? 'text-[#123524] bg-[#EAF6EC]' 
                   : 'text-gray-600 hover:text-[#123524] hover:bg-gray-50'
@@ -100,7 +101,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => handleNav('/about')}
               id="nav-about-btn"
-              className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors ${
+              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
                 currentRoute === '/about' 
                   ? 'text-[#123524] bg-[#EAF6EC]' 
                   : 'text-gray-600 hover:text-[#123524] hover:bg-gray-50'
@@ -109,9 +110,24 @@ export const Navbar: React.FC<NavbarProps> = ({
               About
             </button>
             <button
+              onClick={() => handleNav('/future-updates')}
+              id="nav-future-updates-btn"
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                currentRoute === '/future-updates' || currentRoute === '/roadmap'
+                  ? 'text-[#123524] bg-[#EAF6EC]' 
+                  : 'text-gray-600 hover:text-[#123524] hover:bg-gray-50'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#2E7D32]" />
+              <span>Future Updates</span>
+              <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-[#EAF6EC] text-[#2E7D32] border border-[#2E7D32]/20">
+                AI
+              </span>
+            </button>
+            <button
               onClick={() => handleNav('/scan')}
               id="nav-scan-btn"
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
                 currentRoute === '/scan'
                   ? 'bg-[#2E7D32] text-white shadow-sm'
                   : 'text-[#2E7D32] bg-[#EAF6EC] hover:bg-[#2E7D32] hover:text-white'
@@ -275,8 +291,22 @@ export const Navbar: React.FC<NavbarProps> = ({
               About Aurbana
             </button>
             <button
+              onClick={() => handleNav('/future-updates')}
+              className={`p-2.5 text-left rounded-lg text-sm font-semibold flex items-center justify-between ${
+                currentRoute === '/future-updates' || currentRoute === '/roadmap' ? 'bg-[#EAF6EC] text-[#123524]' : 'text-gray-700'
+              }`}
+            >
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[#2E7D32]" />
+                <span>Future Updates</span>
+              </span>
+              <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-[#EAF6EC] text-[#2E7D32]">
+                AI
+              </span>
+            </button>
+            <button
               onClick={() => handleNav('/contact')}
-              className={`p-2.5 text-left rounded-lg text-sm font-semibold ${
+              className={`p-2.5 text-left rounded-lg text-sm font-semibold col-span-2 ${
                 currentRoute === '/contact' ? 'bg-[#EAF6EC] text-[#123524]' : 'text-gray-700'
               }`}
             >

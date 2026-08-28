@@ -13,6 +13,7 @@ import { QRManagementPage } from './pages/QRManagementPage';
 import { FarmsPage } from './pages/FarmsPage';
 import { HowItWorksPage } from './pages/HowItWorksPage';
 import { AboutPage } from './pages/AboutPage';
+import { FutureUpdatesPage } from './pages/FutureUpdatesPage';
 import { LoginPage } from './pages/LoginPage';
 import { ContactPage } from './pages/ContactPage';
 import { ProduceRecord, UserSession } from './types';
@@ -194,6 +195,10 @@ export default function App() {
 
       case '/about':
         return <AboutPage navigate={navigate} />;
+
+      case '/future-updates':
+      case '/roadmap':
+        return <FutureUpdatesPage navigate={navigate} />;
 
       case '/login':
         return (

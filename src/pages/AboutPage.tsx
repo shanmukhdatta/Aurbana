@@ -99,6 +99,34 @@ export const AboutPage: React.FC<AboutPageProps> = ({ navigate }) => {
         </div>
       </div>
 
+      {/* Next-Gen Innovation & Architecture Callout */}
+      <div className="bg-linear-to-br from-[#123524] via-[#1a442e] to-[#123524] text-white p-8 sm:p-10 rounded-3xl space-y-6 shadow-xl border border-[#2E7D32]/30 relative overflow-hidden">
+        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-[#2E7D32]/30 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+          <div className="space-y-3 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-[#8BC34A]/30 text-[#8BC34A] text-xs font-bold uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Future Innovation Roadmap</span>
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              Vernacular Voice & Gemini Vision AI
+            </h3>
+            <p className="text-sm text-gray-200 leading-relaxed">
+              We are actively architecting multi-lingual voice recording for rural smallholders ("Speak, Don't Type" in Hindi, Punjabi, Telugu, and English) and real-time optical produce quality grading using Google Gemini Vision.
+            </p>
+          </div>
+
+          <button
+            onClick={() => navigate('/future-updates')}
+            className="px-6 py-3.5 rounded-2xl bg-[#8BC34A] hover:bg-[#7cb342] text-[#123524] text-xs font-black shadow-lg shadow-[#8BC34A]/25 transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap self-start md:self-center"
+          >
+            <span>Explore Architecture Roadmap</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
       {/* CTA Box */}
       <div className="p-8 rounded-3xl bg-[#123524] text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
         <div className="space-y-1 text-center md:text-left">
