@@ -41,23 +41,23 @@ Aurbana is engineered as a unified, high-performance TypeScript web application 
 
 ```mermaid
 graph TD
-    User[Consumer / Mobile Camera / Google Lens] -->|Scans QR or visits URL| SPA[React 19 SPA Frontend]
-    Staff[Farmer / Logistics / Retail Staff] -->|Creates / Edits / Searches Produce| SPA
+    User["Consumer / Mobile Camera / Google Lens"] -->|Scans QR or visits URL| SPA["React 19 SPA Frontend"]
+    Staff["Farmer / Logistics / Retail Staff"] -->|Creates / Edits / Searches Produce| SPA
     
     subgraph Frontend Architecture
-        SPA --> Router[Client Router /p/:produceId]
-        SPA --> QRComponent[QR Code Generator & Printable Studio]
-        SPA --> CamScanner[jsQR Real-Time Webcam Engine]
-        SPA --> StoreService[ProduceStorageService Event Bus & Cache]
+        SPA --> Router["Client Router (/p/:produceId)"]
+        SPA --> QRComponent["QR Code Generator & Printable Studio"]
+        SPA --> CamScanner["jsQR Real-Time Webcam Engine"]
+        SPA --> StoreService["ProduceStorageService Event Bus & Cache"]
     end
 
     subgraph Backend Architecture
-        StoreService -->|REST Fetch / Sync / Search| Express[Express Server server.ts]
-        Express --> APIProduce[/api/produce GET/POST]
-        Express --> APISearch[/api/produce/search?q=... GET]
-        Express --> APIId[/api/produce/:id GET/PATCH/DELETE]
-        Express --> APIScan[/api/produce/:id/scan POST]
-        Express --> JSONDB[(Persistent File Database: produce_store.json)]
+        StoreService -->|REST Fetch / Sync / Search| Express["Express Server (server.ts)"]
+        Express --> APIProduce["/api/produce (GET / POST)"]
+        Express --> APISearch["/api/produce/search (GET)"]
+        Express --> APIId["/api/produce/:id (GET / PATCH / DELETE)"]
+        Express --> APIScan["/api/produce/:id/scan (POST)"]
+        Express --> JSONDB[("Persistent File Database (produce_store.json)")]
     end
 ```
 
