@@ -38,40 +38,42 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#EAF6EC] transition-all">
+    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-gray-200/70 shadow-2xs transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-20">
+        <div className="flex items-center justify-between h-16">
           {/* Brand Logo */}
           <div 
             onClick={() => handleNav('/')}
-            className="flex items-center gap-3 cursor-pointer group"
+            className="flex items-center gap-2.5 cursor-pointer group select-none"
             id="nav-logo-btn"
           >
-            <div className="w-10 h-10 rounded-xl bg-[#123524] flex items-center justify-center text-white shadow-md shadow-[#2E7D32]/15 group-hover:bg-[#2E7D32] transition-colors">
-              <Leaf className="w-5 h-5 text-[#8BC34A]" />
+            <div className="w-9 h-9 rounded-xl bg-[#123524] flex items-center justify-center text-white shadow-sm shadow-[#2E7D32]/20 group-hover:bg-[#2E7D32] transition-colors border border-emerald-800/40">
+              <Leaf className="w-4.5 h-4.5 text-[#8BC34A]" />
             </div>
             <div className="flex flex-col">
-              <span className="font-extrabold text-xl tracking-tight text-[#123524] flex items-center gap-1.5">
-                Aurbana
-                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full bg-[#EAF6EC] text-[#2E7D32] border border-[#2E7D32]/20">
+              <div className="flex items-center gap-1.5 leading-none">
+                <span className="font-black text-lg tracking-tight text-[#123524]">
+                  Aurbana
+                </span>
+                <span className="text-[9px] uppercase font-extrabold tracking-wider px-1.5 py-0.5 rounded-full bg-[#EAF6EC] text-[#2E7D32] border border-[#2E7D32]/20">
                   AgriTech
                 </span>
-              </span>
-              <span className="text-[11px] text-[#2E7D32] font-medium hidden sm:block">
-                Fresh Produce Digital Identity
+              </div>
+              <span className="text-[10px] text-gray-500 font-medium hidden sm:block pt-0.5 tracking-tight">
+                Digital Produce Passport
               </span>
             </div>
           </div>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1">
+          {/* Desktop Segmented Island Navigation */}
+          <nav className="hidden md:flex items-center p-1 rounded-full bg-gray-100/90 border border-gray-200/80 shadow-inner-sm">
             <button
               onClick={() => handleNav('/')}
               id="nav-home-btn"
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 currentRoute === '/' 
-                  ? 'text-[#123524] bg-[#EAF6EC]' 
-                  : 'text-gray-600 hover:text-[#123524] hover:bg-gray-50'
+                  ? 'bg-white text-[#123524] shadow-xs' 
+                  : 'text-gray-600 hover:text-[#123524] hover:bg-white/50'
               }`}
             >
               Home
@@ -79,10 +81,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => handleNav('/how-it-works')}
               id="nav-howitworks-btn"
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 currentRoute === '/how-it-works' 
-                  ? 'text-[#123524] bg-[#EAF6EC]' 
-                  : 'text-gray-600 hover:text-[#123524] hover:bg-gray-50'
+                  ? 'bg-white text-[#123524] shadow-xs' 
+                  : 'text-gray-600 hover:text-[#123524] hover:bg-white/50'
               }`}
             >
               How It Works
@@ -90,10 +92,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => handleNav('/farms')}
               id="nav-farms-btn"
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 currentRoute === '/farms' 
-                  ? 'text-[#123524] bg-[#EAF6EC]' 
-                  : 'text-gray-600 hover:text-[#123524] hover:bg-gray-50'
+                  ? 'bg-white text-[#123524] shadow-xs' 
+                  : 'text-gray-600 hover:text-[#123524] hover:bg-white/50'
               }`}
             >
               Farms
@@ -101,22 +103,22 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => handleNav('/about')}
               id="nav-about-btn"
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 currentRoute === '/about' 
-                  ? 'text-[#123524] bg-[#EAF6EC]' 
-                  : 'text-gray-600 hover:text-[#123524] hover:bg-gray-50'
+                  ? 'bg-white text-[#123524] shadow-xs' 
+                  : 'text-gray-600 hover:text-[#123524] hover:bg-white/50'
               }`}
             >
               About
             </button>
             <button
               onClick={() => handleNav('/future-updates')}
-              id="nav-future-updates-btn"
-              title="Future Updates & AI Architecture"
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+              id="nav-ai-btn"
+              title="Future AI Architecture & Roadmap"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer ${
                 currentRoute === '/future-updates' || currentRoute === '/roadmap'
-                  ? 'text-[#123524] bg-[#EAF6EC] ring-1 ring-[#2E7D32]/25' 
-                  : 'text-gray-600 hover:text-[#123524] hover:bg-[#EAF6EC]/60'
+                  ? 'bg-[#123524] text-[#8BC34A] shadow-xs' 
+                  : 'text-gray-700 hover:text-[#123524] hover:bg-white/50'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-[#2E7D32]" />
@@ -125,26 +127,26 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => handleNav('/scan')}
               id="nav-scan-btn"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 currentRoute === '/scan'
-                  ? 'bg-[#2E7D32] text-white shadow-xs'
-                  : 'text-[#2E7D32] bg-[#EAF6EC] hover:bg-[#2E7D32] hover:text-white'
+                  ? 'bg-[#2E7D32] text-white shadow-xs' 
+                  : 'text-[#2E7D32] hover:text-[#123524] hover:bg-white/50'
               }`}
             >
               <ScanLine className="w-3.5 h-3.5" />
-              <span>Scan Produce</span>
+              <span>Scan</span>
             </button>
           </nav>
 
           {/* Desktop Right Actions */}
-          <div className="hidden lg:flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2">
             {activeUser ? (
               <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
                 <button
                   onClick={() => handleNav('/dashboard')}
                   id="nav-dashboard-btn"
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                    currentRoute === '/dashboard' ? 'bg-[#123524] text-white' : 'text-gray-700 hover:bg-gray-100'
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                    currentRoute === '/dashboard' ? 'bg-[#123524] text-white shadow-xs' : 'text-gray-700 hover:bg-gray-100'
                   }`}
                   title="Staff Dashboard"
                 >
@@ -155,7 +157,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   onClick={() => handleNav('/create')}
                   id="nav-create-btn"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#2E7D32] text-white hover:bg-[#123524] transition-colors shadow-xs"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black bg-gradient-to-r from-[#123524] to-[#2E7D32] text-white hover:from-[#1b4832] hover:to-[#256629] shadow-xs hover:shadow transition-all cursor-pointer"
                 >
                   <PlusCircle className="w-3.5 h-3.5 text-[#8BC34A]" />
                   <span>+ Create Identity</span>
@@ -164,7 +166,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   onClick={() => handleNav('/records')}
                   id="nav-records-btn"
-                  className={`p-1.5 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors ${
+                  className={`p-1.5 rounded-full text-gray-700 hover:bg-gray-100 transition-colors ${
                     currentRoute === '/records' ? 'text-[#2E7D32] bg-[#EAF6EC]' : ''
                   }`}
                   title="Produce Records"
@@ -175,7 +177,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   onClick={() => handleNav('/qr-management')}
                   id="nav-qrmanage-btn"
-                  className={`p-1.5 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors ${
+                  className={`p-1.5 rounded-full text-gray-700 hover:bg-gray-100 transition-colors ${
                     currentRoute === '/qr-management' ? 'text-[#2E7D32] bg-[#EAF6EC]' : ''
                   }`}
                   title="QR Labels & Print Studio"
@@ -194,7 +196,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <button
                     onClick={onLogout}
                     id="nav-logout-btn"
-                    className="p-1 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                    className="p-1 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors"
                     title="Sign Out"
                   >
                     <LogOut className="w-3.5 h-3.5" />
@@ -206,15 +208,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   onClick={() => handleNav('/login')}
                   id="nav-login-btn"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-[#123524] bg-[#EAF6EC] hover:bg-[#2E7D32] hover:text-white transition-colors border border-[#2E7D32]/20"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-gray-700 hover:text-[#123524] hover:bg-gray-100/80 transition-colors"
                 >
-                  <LogIn className="w-3.5 h-3.5" />
+                  <LogIn className="w-3.5 h-3.5 text-gray-500" />
                   <span>Staff Login</span>
                 </button>
                 <button
                   onClick={() => handleNav('/create')}
                   id="nav-quick-create-btn"
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#2E7D32] text-white hover:bg-[#123524] shadow-xs transition-all"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black bg-gradient-to-r from-[#123524] to-[#2E7D32] hover:from-[#1b4832] hover:to-[#256629] text-white shadow-sm hover:shadow transition-all cursor-pointer"
                 >
                   <PlusCircle className="w-3.5 h-3.5 text-[#8BC34A]" />
                   <span>Create Identity</span>
@@ -224,7 +226,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex lg:hidden items-center gap-2">
+          <div className="flex md:hidden items-center gap-2">
             <button
               onClick={() => handleNav('/scan')}
               className="p-2 rounded-lg bg-[#EAF6EC] text-[#2E7D32]"
@@ -246,7 +248,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-gray-200 bg-white px-4 pt-3 pb-6 space-y-3 shadow-xl animate-in slide-in-from-top-4 duration-200">
+        <div className="md:hidden border-t border-gray-200 bg-white px-4 pt-3 pb-6 space-y-3 shadow-xl animate-in slide-in-from-top-4 duration-200">
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => handleNav('/')}
