@@ -113,17 +113,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleNav('/future-updates')}
               id="nav-future-updates-btn"
               title="Future Updates & AI Architecture"
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
                 currentRoute === '/future-updates' || currentRoute === '/roadmap'
                   ? 'text-[#123524] bg-[#EAF6EC] ring-1 ring-[#2E7D32]/25' 
-                  : 'text-gray-600 hover:text-[#123524] hover:bg-gray-50'
+                  : 'text-gray-600 hover:text-[#123524] hover:bg-[#EAF6EC]/60'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-[#2E7D32]" />
-              <span>Future Updates</span>
-              <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md bg-[#123524] text-[#8BC34A] leading-none">
-                AI
-              </span>
+              <span>AI</span>
             </button>
             <button
               onClick={() => handleNav('/scan')}
@@ -299,10 +296,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <span className="flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-[#2E7D32]" />
-                <span>Future Updates</span>
+                <span>AI Architecture</span>
               </span>
               <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-[#EAF6EC] text-[#2E7D32]">
-                AI
+                New
               </span>
             </button>
             <button
