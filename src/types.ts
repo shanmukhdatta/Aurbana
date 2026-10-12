@@ -38,6 +38,28 @@ export interface ProduceRecord {
   shelf_life_days?: number;
   temp_celsius?: number;
   journey?: TraceabilityStep[];
+  vision_analysis?: ProduceVisionAnalysis;
+}
+
+export interface ProduceVisionAnalysis {
+  crop: string;
+  produce_name: string;
+  variety: string;
+  grade: string;
+  condition: ProduceCondition;
+  freshness_score: string;
+  freshness_percentage: number;
+  defect_percentage: number;
+  surface_defects: string;
+  color_uniformity: string;
+  firmness: string;
+  sugar_brix_estimate: string;
+  estimated_shelf_life_days: number;
+  ocr_detected_text?: string;
+  recommended_action: string;
+  agronomist_summary: string;
+  inspected_at?: string;
+  is_live_gemini?: boolean;
 }
 
 export interface FarmPartner {

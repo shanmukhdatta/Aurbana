@@ -24,8 +24,9 @@ import {
   RefreshCw
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { ProduceRecord, ProduceCondition, ProduceCategory } from '../types';
+import { ProduceRecord, ProduceCondition, ProduceCategory, ProduceVisionAnalysis } from '../types';
 import { ProduceStorageService } from '../services/produceStorage';
+import { GeminiVisionService } from '../services/geminiVisionService';
 import { generateProduceId } from '../utils/idGenerator';
 import { getProduceImage } from '../utils/produceImageHelper';
 import { PRODUCE_PRESETS } from '../data/mockProduce';
@@ -57,6 +58,11 @@ export const CreateProducePage: React.FC<CreateProducePageProps> = ({ onSuccess,
   const cameraStreamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   
+  // AI Vision Quality Inspection State
+  const [isInspectingAI, setIsInspectingAI] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<ProduceVisionAnalysis | null>(null);
+  const [appliedAISuggestions, setAppliedAISuggestions] = useState(false);
+  
   // Expandable additional info
   const [showAdditional, setShowAdditional] = useState(false);
   const [supplierName, setSupplierName] = useState('Green Valley Agri-Cooperative');
@@ -79,6 +85,31 @@ export const CreateProducePage: React.FC<CreateProducePageProps> = ({ onSuccess,
   // UI Errors & Loading
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check for prefilled AI inspection from Home Screen or Sandbox
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem('aurbana_ai_prefill');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.image) setImageUrl(parsed.image);
+        if (parsed.title) {
+          setProduceName(parsed.analysis?.produce_name || parsed.title);
+        }
+        if (parsed.analysis) {
+          setAiAnalysis(parsed.analysis);
+          if (parsed.analysis.condition) setCondition(parsed.analysis.condition);
+          if (parsed.analysis.variety) setVariety(parsed.analysis.variety);
+          const aiNote = `[Gemini Optical Inspection: ${parsed.analysis.grade}, Freshness ${parsed.analysis.freshness_score}, Defect ${parsed.analysis.defect_percentage}%. ${parsed.analysis.recommended_action}]`;
+          setNotes(aiNote);
+          setAppliedAISuggestions(true);
+        }
+        sessionStorage.removeItem('aurbana_ai_prefill');
+      }
+    } catch (e) {
+      console.warn('Could not read AI prefill draft:', e);
+    }
+  }, []);
 
   // Quick preset selector
   const handleSelectPreset = (preset: typeof PRODUCE_PRESETS[0]) => {
@@ -182,6 +213,8 @@ export const CreateProducePage: React.FC<CreateProducePageProps> = ({ onSuccess,
           setErrors(prev => ({ ...prev, imageUrl: '' }));
         }
         stopCamera();
+        // Automatically trigger AI quality grading on the captured photo
+        handleInspectProduceWithAI(dataUrl);
       }
     } catch (err) {
       console.error('Error capturing snapshot:', err);
@@ -201,10 +234,13 @@ export const CreateProducePage: React.FC<CreateProducePageProps> = ({ onSuccess,
     const reader = new FileReader();
     reader.onload = (event) => {
       if (typeof event.target?.result === 'string') {
-        setImageUrl(event.target.result);
+        const dataUrl = event.target.result;
+        setImageUrl(dataUrl);
         if (errors.imageUrl) {
           setErrors(prev => ({ ...prev, imageUrl: '' }));
         }
+        // Automatically trigger AI quality grading on uploaded photo
+        handleInspectProduceWithAI(dataUrl);
       }
     };
     reader.readAsDataURL(file);
@@ -255,6 +291,58 @@ export const CreateProducePage: React.FC<CreateProducePageProps> = ({ onSuccess,
     return true;
   };
 
+  const handleInspectProduceWithAI = async (overrideImg?: string) => {
+    const targetImg = overrideImg || imageUrl;
+    if (!targetImg) return;
+    setIsInspectingAI(true);
+    setAppliedAISuggestions(false);
+
+    try {
+      const hint = produceName === 'Fresh Produce' || produceName === 'Produce' ? '' : produceName;
+      const res = await GeminiVisionService.analyzeProduce(targetImg, hint);
+      if (res && res.analysis) {
+        setAiAnalysis(res.analysis);
+        if (res.analysis.condition) {
+          setCondition(res.analysis.condition);
+        }
+        if (res.analysis.variety) {
+          setVariety(res.analysis.variety);
+        }
+        if (res.analysis.produce_name && (!produceName || produceName === 'Fresh Produce' || produceName === 'Produce')) {
+          setProduceName(res.analysis.produce_name);
+        }
+        const aiNote = `[Gemini Optical Inspection: ${res.analysis.grade}, Freshness ${res.analysis.freshness_score}, Defect ${res.analysis.defect_percentage}%. ${res.analysis.recommended_action}]`;
+        setNotes((prev) => (prev ? `${prev} • ${aiNote}` : aiNote));
+        setAppliedAISuggestions(true);
+      }
+    } catch (err) {
+      console.error('Error during AI produce inspection:', err);
+    } finally {
+      setIsInspectingAI(false);
+    }
+  };
+
+  const handleApplyAISuggestions = () => {
+    if (!aiAnalysis) return;
+
+    if (aiAnalysis.condition) {
+      setCondition(aiAnalysis.condition);
+    }
+    if (aiAnalysis.variety) {
+      setVariety(aiAnalysis.variety);
+    }
+    if (aiAnalysis.produce_name && aiAnalysis.produce_name !== 'Produce') {
+      setProduceName(aiAnalysis.produce_name);
+    }
+
+    const aiNote = `[Gemini Optical Inspection: ${aiAnalysis.grade}, Freshness ${aiAnalysis.freshness_score}, Defect ${aiAnalysis.defect_percentage}%. ${aiAnalysis.recommended_action}]`;
+    if (!notes.includes(aiNote)) {
+      setNotes((prev) => (prev ? `${prev} • ${aiNote}` : aiNote));
+    }
+
+    setAppliedAISuggestions(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
@@ -273,6 +361,15 @@ export const CreateProducePage: React.FC<CreateProducePageProps> = ({ onSuccess,
       const harvestFormatted = isNaN(harvestDateObj.getTime()) 
         ? `${parsedAge} Days Ago` 
         : harvestDateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+      // Determine grade from AI analysis if available
+      let computedGrade: 'Grade A+' | 'Grade A' | 'Grade B' | 'Standard' = 
+        condition === 'Excellent' ? 'Grade A+' : condition === 'Good' ? 'Grade A' : 'Standard';
+      if (aiAnalysis?.grade) {
+        if (aiAnalysis.grade.includes('Grade A+')) computedGrade = 'Grade A+';
+        else if (aiAnalysis.grade.includes('Grade A')) computedGrade = 'Grade A';
+        else if (aiAnalysis.grade.includes('Grade B')) computedGrade = 'Grade B';
+      }
 
       const newRecord = await ProduceStorageService.createRecord({
         produce_id: generatedId,
@@ -293,8 +390,9 @@ export const CreateProducePage: React.FC<CreateProducePageProps> = ({ onSuccess,
         notes: notes.trim() || undefined,
         image_url: imageUrl.trim() || getProduceImage(finalName, category),
         status: 'Active',
-        grade: condition === 'Excellent' ? 'Grade A+' : condition === 'Good' ? 'Grade A' : 'Standard',
-        shelf_life_days: category === 'Leafy Green' ? 5 : category === 'Fruit' ? 10 : 25,
+        grade: computedGrade,
+        shelf_life_days: aiAnalysis?.estimated_shelf_life_days || (category === 'Leafy Green' ? 5 : category === 'Fruit' ? 10 : 25),
+        vision_analysis: aiAnalysis || undefined,
         journey: [
           {
             title: 'Harvested',
@@ -369,6 +467,78 @@ export const CreateProducePage: React.FC<CreateProducePageProps> = ({ onSuccess,
       {/* Main Registration Form */}
       <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-gray-100 space-y-8">
         
+        {/* TOP BANNER: AI Optical Auto-Fill Assistant */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#123524] via-[#1a442e] to-[#2E7D32] text-white shadow-lg space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-[#8BC34A] shrink-0 border border-white/20">
+                <Sparkles className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-white flex items-center gap-1.5">
+                  <span>Gemini AI Auto-Grading & Optical Registration</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#8BC34A] text-[#123524]">
+                    Fast Track
+                  </span>
+                </h3>
+                <p className="text-xs text-gray-200">
+                  Take a photo or pick a sample — Gemini Vision auto-detects crop variety, freshness, and quality grade.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => startCamera()}
+              className="self-start sm:self-auto px-4 py-2 rounded-xl bg-[#8BC34A] hover:bg-[#7cb342] text-[#123524] text-xs font-black shadow-md flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+            >
+              <Camera className="w-4 h-4" />
+              <span>Snap & Auto-Grade</span>
+            </button>
+          </div>
+
+          {/* Quick AI Sample Test Chips */}
+          <div className="pt-2 border-t border-white/15 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-gray-300 font-semibold">
+              Instant AI Test Crops:
+            </span>
+            {[
+              { name: 'Roma Tomato', crop: 'Tomato', img: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=800&auto=format&fit=crop&q=80' },
+              { name: 'Strawberries', crop: 'Strawberry', img: 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=800&auto=format&fit=crop&q=80' },
+              { name: 'Savoy Spinach', crop: 'Spinach', img: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=800&auto=format&fit=crop&q=80' },
+              { name: 'Alphonso Mango', crop: 'Mango', img: 'https://images.unsplash.com/photo-1553279768-865429fa0078?w=800&auto=format&fit=crop&q=80' },
+            ].map((item) => (
+              <button
+                type="button"
+                key={item.name}
+                onClick={async () => {
+                  setProduceName(item.crop);
+                  setImageUrl(item.img);
+                  setIsInspectingAI(true);
+                  try {
+                    const res = await GeminiVisionService.analyzeProduce(item.img, item.crop);
+                    if (res?.analysis) {
+                      setAiAnalysis(res.analysis);
+                      if (res.analysis.condition) setCondition(res.analysis.condition);
+                      if (res.analysis.variety) setVariety(res.analysis.variety);
+                      const note = `[Gemini Optical Inspection: ${res.analysis.grade}, Freshness ${res.analysis.freshness_score}, Defect ${res.analysis.defect_percentage}%. ${res.analysis.recommended_action}]`;
+                      setNotes(note);
+                      setAppliedAISuggestions(true);
+                    }
+                  } catch (e) {
+                    console.error(e);
+                  } finally {
+                    setIsInspectingAI(false);
+                  }
+                }}
+                className="px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-white text-[11px] font-bold border border-white/20 transition-all cursor-pointer flex items-center gap-1"
+              >
+                <span>⚡ {item.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* SECTION 1: Core Produce Details */}
         <div className="space-y-6">
           <div className="border-b border-gray-100 pb-3 flex items-center justify-between">
@@ -775,6 +945,84 @@ export const CreateProducePage: React.FC<CreateProducePageProps> = ({ onSuccess,
                     </div>
                   )}
                 </div>
+
+                {/* AI Camera Inspection with Gemini Vision Button */}
+                {imageUrl && (
+                  <div className="pt-3 border-t border-gray-200 space-y-3">
+                    <button
+                      type="button"
+                      onClick={handleInspectProduceWithAI}
+                      disabled={isInspectingAI}
+                      id="gemini-ai-inspect-produce-btn"
+                      className="w-full py-3 px-4 rounded-xl bg-linear-to-r from-[#123524] via-[#1a442e] to-[#2E7D32] hover:from-[#1a442e] hover:to-[#123524] text-white text-xs font-black shadow-md shadow-[#123524]/20 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {isInspectingAI ? (
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Sparkles className="w-4 h-4 text-[#8BC34A]" />
+                      )}
+                      <span>
+                        {isInspectingAI ? 'Analyzing Quality with Gemini Vision...' : '🤖 Inspect Quality with Gemini AI'}
+                      </span>
+                    </button>
+
+                    {/* AI Inspection Results Card */}
+                    {aiAnalysis && (
+                      <div className="p-4 rounded-2xl bg-white border-2 border-[#2E7D32]/30 shadow-sm space-y-3 animate-in fade-in zoom-in-95">
+                        <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-[#8BC34A] animate-pulse" />
+                            <span className="text-[10px] font-black uppercase text-[#2E7D32] tracking-wider">
+                              Gemini Vision QA Report
+                            </span>
+                          </div>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#EAF6EC] text-[#2E7D32] border border-[#2E7D32]/20">
+                            {aiAnalysis.grade}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div className="p-2 rounded-xl bg-[#F8FAF8] border border-gray-100">
+                            <span className="text-[9px] text-gray-500 font-bold block uppercase">Freshness</span>
+                            <span className="text-xs font-black text-[#123524]">{aiAnalysis.freshness_score}</span>
+                          </div>
+                          <div className="p-2 rounded-xl bg-[#F8FAF8] border border-gray-100">
+                            <span className="text-[9px] text-gray-500 font-bold block uppercase">Defect</span>
+                            <span className="text-xs font-black text-[#2E7D32]">{aiAnalysis.defect_percentage}%</span>
+                          </div>
+                          <div className="p-2 rounded-xl bg-[#F8FAF8] border border-gray-100">
+                            <span className="text-[9px] text-gray-500 font-bold block uppercase">Sugar Brix</span>
+                            <span className="text-xs font-black text-[#123524]">{aiAnalysis.sugar_brix_estimate}</span>
+                          </div>
+                        </div>
+
+                        <div className="text-[11px] text-gray-600 space-y-1">
+                          <div className="font-bold text-[#123524]">{aiAnalysis.crop}</div>
+                          <p className="text-gray-500 text-[10px]">{aiAnalysis.surface_defects}</p>
+                          {aiAnalysis.ocr_detected_text && (
+                            <p className="text-[10px] font-mono text-[#2E7D32] bg-[#EAF6EC] p-1.5 rounded">
+                              OCR: {aiAnalysis.ocr_detected_text}
+                            </p>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleApplyAISuggestions}
+                          disabled={appliedAISuggestions}
+                          className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                            appliedAISuggestions
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-[#EAF6EC] hover:bg-[#2E7D32] text-[#2E7D32] hover:text-white border border-[#2E7D32]/30 cursor-pointer'
+                          }`}
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>{appliedAISuggestions ? '✓ AI Recommendations Applied to Form' : 'Apply AI Recommendations to Form'}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Status Note */}

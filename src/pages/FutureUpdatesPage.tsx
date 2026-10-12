@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Mic, 
   Sparkles, 
   Languages, 
   Cpu, 
   Camera, 
+  CameraOff,
   ShieldCheck, 
   ArrowRight, 
   CheckCircle2, 
@@ -21,8 +22,17 @@ import {
   Terminal,
   Activity,
   Award,
-  Leaf
+  Leaf,
+  Upload,
+  FileDown,
+  Key,
+  Check,
+  X,
+  ExternalLink,
+  Scan
 } from 'lucide-react';
+import { GeminiVisionService } from '../services/geminiVisionService';
+import { ProduceVisionAnalysis } from '../types';
 
 interface FutureUpdatesPageProps {
   navigate: (route: string) => void;
@@ -34,10 +44,26 @@ export const FutureUpdatesPage: React.FC<FutureUpdatesPageProps> = ({ navigate }
   const [isSimulatingVoice, setIsSimulatingVoice] = useState(false);
   const [voiceParsedData, setVoiceParsedData] = useState<any>(null);
 
-  // Vision Simulator State
+  // Vision Simulator & Live AI Inspection State
   const [selectedImageSample, setSelectedImageSample] = useState<number>(0);
+  const [customImage, setCustomImage] = useState<string | null>(null);
+  const [customImageTitle, setCustomImageTitle] = useState<string>('Custom Produce Sample');
+  const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [isAnalyzingVision, setIsAnalyzingVision] = useState(false);
-  const [visionResult, setVisionResult] = useState<any>(null);
+  const [visionAnalysis, setVisionAnalysis] = useState<ProduceVisionAnalysis | null>(null);
+  const [apiStatus, setApiStatus] = useState<{ configured: boolean; model: string; engine: string }>({
+    configured: false,
+    model: 'gemini-2.5-flash',
+    engine: 'Aurbana Certified Agronomist Optical Engine',
+  });
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [userApiKeyInput, setUserApiKeyInput] = useState(() => GeminiVisionService.getStoredApiKey());
+  const [apiKeySaveSuccess, setApiKeySaveSuccess] = useState(false);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Language Simulator State
   const [currentLang, setCurrentLang] = useState<'en' | 'hi' | 'pa' | 'te' | 'es'>('en');
@@ -201,15 +227,147 @@ export const FutureUpdatesPage: React.FC<FutureUpdatesPageProps> = ({ navigate }
     }, 1200);
   };
 
-  const simulateVisionAnalysis = (idx: number) => {
-    setSelectedImageSample(idx);
-    setIsAnalyzingVision(true);
-    setVisionResult(null);
+  // Initialize API status & default analysis on mount
+  useEffect(() => {
+    GeminiVisionService.checkApiStatus().then(setApiStatus);
+    setVisionAnalysis(visionSamples[0].analysis as any);
+  }, []);
 
-    setTimeout(() => {
+  // Stop webcam stream safely
+  const stopWebcam = () => {
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach((track) => track.stop());
+      cameraStreamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+  };
+
+  // Start webcam
+  const startWebcam = async () => {
+    setCameraError(null);
+    setIsCameraActive(true);
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraError('Camera API is not supported in this browser environment.');
+        setIsCameraActive(false);
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      cameraStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute('playsinline', 'true');
+        videoRef.current.muted = true;
+        await videoRef.current.play();
+      }
+    } catch (err: any) {
+      console.warn('Webcam start error:', err);
+      setCameraError(err?.message || 'Camera permission denied or camera unavailable.');
+      setIsCameraActive(false);
+    }
+  };
+
+  // Snap photo from webcam and analyze
+  const captureWebcamSnapshot = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        setCustomImage(dataUrl);
+        setCustomImageTitle('Live Camera Inspection');
+        stopWebcam();
+        triggerVisionAnalysis(dataUrl, 'Live Camera Produce');
+      }
+    } catch (e) {
+      console.error('Snapshot failed', e);
+      setCameraError('Failed to capture snapshot from camera.');
+    }
+  };
+
+  // Handle custom image file upload
+  const handleCustomFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file (JPEG, PNG, WebP).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setCustomImage(result);
+        const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+        setCustomImageTitle(cleanName || 'Uploaded Produce');
+        stopWebcam();
+        triggerVisionAnalysis(result, cleanName);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Trigger Gemini Vision Analysis
+  const triggerVisionAnalysis = async (imgToAnalyze?: string, cropHint?: string) => {
+    setIsAnalyzingVision(true);
+    const targetImage = imgToAnalyze || (customImage ? customImage : visionSamples[selectedImageSample].img);
+    const targetTitle = cropHint || (customImage ? customImageTitle : visionSamples[selectedImageSample].title);
+
+    try {
+      const res = await GeminiVisionService.analyzeProduce(targetImage, targetTitle);
+      if (res && res.analysis) {
+        setVisionAnalysis(res.analysis);
+      }
+    } catch (err) {
+      console.error('Vision analysis error:', err);
+    } finally {
       setIsAnalyzingVision(false);
-      setVisionResult(visionSamples[idx].analysis);
-    }, 1400);
+    }
+  };
+
+  // Select one of the preset samples
+  const selectPresetSample = (idx: number) => {
+    setSelectedImageSample(idx);
+    setCustomImage(null);
+    stopWebcam();
+    triggerVisionAnalysis(visionSamples[idx].img, visionSamples[idx].title);
+  };
+
+  // Download PDF certificate
+  const handleDownloadCertificate = () => {
+    if (!visionAnalysis) return;
+    const currentCropName = customImage ? customImageTitle : visionSamples[selectedImageSample].title;
+    GeminiVisionService.generateAgronomistCertificatePdf(
+      visionAnalysis,
+      currentCropName,
+      `AUR-BATCH-2026-QA-${Math.floor(100 + Math.random() * 900)}`,
+      'Green Valley Certified Organic Cooperative'
+    );
+  };
+
+  // Save API key
+  const handleSaveApiKey = () => {
+    GeminiVisionService.setStoredApiKey(userApiKeyInput);
+    GeminiVisionService.checkApiStatus().then(setApiStatus);
+    setApiKeySaveSuccess(true);
+    setTimeout(() => {
+      setApiKeySaveSuccess(false);
+      setShowApiKeyModal(false);
+    }, 1200);
   };
 
   return (
@@ -564,28 +722,51 @@ export const FutureUpdatesPage: React.FC<FutureUpdatesPageProps> = ({ navigate }
 
           {/* Interactive Vision Simulator */}
           <div className="border border-gray-200 rounded-3xl p-6 bg-[#F8FAF8] space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h4 className="text-base font-black text-[#123524]">
-                  Interactive Gemini Vision Grading Sandbox
+                <h4 className="text-base font-black text-[#123524] flex items-center gap-2">
+                  <span>Interactive Gemini Vision Grading Sandbox</span>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#2E7D32]/10 text-[#2E7D32]">
+                    <Sparkles className="w-3 h-3 text-[#2E7D32]" />
+                    <span>Real-Time AI</span>
+                  </span>
                 </h4>
                 <p className="text-xs text-gray-500">
-                  Select a produce sample photo below to trigger real-time AI optical inspection.
+                  Select a produce sample photo below, upload any custom photo, or take a live camera snapshot to trigger AI optical inspection.
                 </p>
               </div>
-              <span className="hidden sm:inline-block text-[11px] font-bold text-[#2E7D32] bg-[#EAF6EC] px-3 py-1 rounded-full">
-                Gemini 2.5 Flash Vision Model
-              </span>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setShowApiKeyModal(true)}
+                  className="text-[11px] font-bold text-[#123524] hover:text-[#2E7D32] bg-white border border-gray-200 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-2xs hover:border-[#2E7D32] transition-colors cursor-pointer"
+                >
+                  <Key className="w-3.5 h-3.5 text-[#2E7D32]" />
+                  <span>{apiStatus.configured ? 'Gemini Key Active' : 'API Key Config'}</span>
+                </button>
+                <span className="text-[11px] font-bold text-[#2E7D32] bg-[#EAF6EC] px-3 py-1.5 rounded-full border border-[#2E7D32]/20">
+                  Gemini 2.5 Flash Vision
+                </span>
+              </div>
             </div>
 
+            {/* Hidden file input for custom produce photo */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleCustomFileUpload}
+            />
+
             {/* Image Selector Strip */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               {visionSamples.map((sample, idx) => (
                 <div
                   key={idx}
-                  onClick={() => simulateVisionAnalysis(idx)}
+                  onClick={() => selectPresetSample(idx)}
                   className={`rounded-2xl p-2.5 bg-white border transition-all cursor-pointer flex items-center gap-3 ${
-                    selectedImageSample === idx
+                    !customImage && selectedImageSample === idx
                       ? 'border-[#2E7D32] ring-2 ring-[#2E7D32]/20 shadow-md'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
@@ -593,31 +774,107 @@ export const FutureUpdatesPage: React.FC<FutureUpdatesPageProps> = ({ navigate }
                   <img
                     src={sample.img}
                     alt={sample.title}
-                    className="w-14 h-14 rounded-xl object-cover"
+                    className="w-12 h-12 rounded-xl object-cover shrink-0"
                   />
                   <div className="min-w-0 flex-1">
                     <span className="font-extrabold text-xs text-[#123524] block truncate">
                       {sample.title}
                     </span>
                     <span className="text-[10px] text-[#2E7D32] font-semibold">
-                      {selectedImageSample === idx ? '✓ Currently Selected' : 'Click to inspect'}
+                      {!customImage && selectedImageSample === idx ? '✓ Selected' : 'Inspect'}
                     </span>
                   </div>
                 </div>
               ))}
+
+              {/* Upload Custom Photo Card */}
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className={`rounded-2xl p-2.5 bg-white border border-dashed transition-all cursor-pointer flex items-center gap-3 ${
+                  customImage && !isCameraActive
+                    ? 'border-[#2E7D32] ring-2 ring-[#2E7D32]/20 shadow-md'
+                    : 'border-gray-300 hover:border-[#2E7D32] hover:bg-emerald-50/30'
+                }`}
+              >
+                <div className="w-12 h-12 rounded-xl bg-[#EAF6EC] flex items-center justify-center text-[#2E7D32] shrink-0">
+                  <Upload className="w-5 h-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="font-extrabold text-xs text-[#123524] block truncate">
+                    {customImage && !isCameraActive ? customImageTitle : 'Upload Photo'}
+                  </span>
+                  <span className="text-[10px] text-gray-500 font-medium">
+                    {customImage && !isCameraActive ? '✓ Custom Loaded' : 'JPG, PNG, WebP'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Live Webcam Snap Card */}
+              <div
+                onClick={() => (isCameraActive ? stopWebcam() : startWebcam())}
+                className={`rounded-2xl p-2.5 bg-white border transition-all cursor-pointer flex items-center gap-3 ${
+                  isCameraActive
+                    ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/30 shadow-md'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isCameraActive ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
+                  {isCameraActive ? <CameraOff className="w-5 h-5" /> : <Camera className="w-5 h-5" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="font-extrabold text-xs text-[#123524] block truncate">
+                    {isCameraActive ? 'Active Camera' : 'Live Camera'}
+                  </span>
+                  <span className="text-[10px] text-amber-700 font-semibold">
+                    {isCameraActive ? 'Tap to close' : 'Webcam Snap'}
+                  </span>
+                </div>
+              </div>
             </div>
+
+            {/* Camera Error Alert if any */}
+            {cameraError && (
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>{cameraError}</span>
+              </div>
+            )}
 
             {/* Analysis Output Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-white p-5 sm:p-7 rounded-2xl border border-gray-200 shadow-sm">
-              {/* Photo Display with Simulated Inspection Overlays */}
+              {/* Photo Display with Inspection Overlays */}
               <div className="lg:col-span-5 space-y-3">
                 <div className="relative rounded-2xl overflow-hidden aspect-4/3 bg-gray-900 shadow-inner">
-                  <img
-                    src={visionSamples[selectedImageSample].img}
-                    alt={visionSamples[selectedImageSample].title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30" />
+                  {isCameraActive ? (
+                    <video
+                      ref={videoRef}
+                      className="w-full h-full object-cover"
+                      playsInline
+                      muted
+                      autoPlay
+                    />
+                  ) : (
+                    <img
+                      src={customImage || visionSamples[selectedImageSample].img}
+                      alt={customImage ? customImageTitle : visionSamples[selectedImageSample].title}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/35 pointer-events-none" />
+
+                  {/* Laser Scanning Animation Sweep Overlay */}
+                  {isAnalyzingVision && (
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                      <div className="absolute w-full h-1 bg-linear-to-r from-transparent via-[#8BC34A] to-transparent shadow-[0_0_15px_#8BC34A] animate-pulse top-1/2 -translate-y-1/2" />
+                      <div className="absolute inset-0 bg-[#2E7D32]/10 backdrop-contrast-125" />
+                      <div className="absolute inset-4 border border-[#8BC34A]/40 rounded-xl" />
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white text-xs font-mono font-bold bg-black/70 px-3 py-1.5 rounded-full border border-[#8BC34A]/50 flex items-center gap-2">
+                        <Scan className="w-4 h-4 text-[#8BC34A] animate-spin" />
+                        <span>OPTICAL SPECTROMETRY SCANNING...</span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Optical HUD overlay */}
                   <div className="absolute top-3 left-3 right-3 flex items-center justify-between text-white text-[10px] font-mono">
@@ -626,47 +883,90 @@ export const FutureUpdatesPage: React.FC<FutureUpdatesPageProps> = ({ navigate }
                       <span>GEMINI_AI_SCANNER</span>
                     </span>
                     <span className="bg-[#2E7D32] px-2 py-0.5 rounded font-bold">
-                      100% FOCUS
+                      {isAnalyzingVision ? 'ANALYZING...' : isCameraActive ? 'LIVE WEBCAM' : '100% FOCUS'}
                     </span>
                   </div>
 
                   <div className="absolute bottom-3 left-3 right-3 text-white text-xs space-y-0.5">
                     <div className="font-bold text-sm text-[#8BC34A]">
-                      {visionSamples[selectedImageSample].title}
+                      {customImage ? customImageTitle : visionSamples[selectedImageSample].title}
                     </div>
                     <div className="text-[11px] text-gray-300 font-mono">
-                      Target Area: 1080x720 • Macro Inspection
+                      Target Area: 1080x720 • Macro Optical Inspection
                     </div>
                   </div>
                 </div>
 
-                <button
-                  onClick={() => simulateVisionAnalysis(selectedImageSample)}
-                  disabled={isAnalyzingVision}
-                  className="w-full py-2.5 px-4 rounded-xl bg-[#2E7D32] hover:bg-[#123524] text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {isAnalyzingVision ? (
-                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                {/* Primary Action Buttons */}
+                <div className="space-y-2">
+                  {isCameraActive ? (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={captureWebcamSnapshot}
+                        className="flex-1 py-2.5 px-4 rounded-xl bg-[#2E7D32] hover:bg-[#123524] text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                      >
+                        <Camera className="w-4 h-4 text-[#8BC34A]" />
+                        <span>Capture & Analyze</span>
+                      </button>
+                      <button
+                        onClick={stopWebcam}
+                        className="py-2.5 px-4 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs font-bold transition-all cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   ) : (
-                    <RefreshCw className="w-3.5 h-3.5 text-[#8BC34A]" />
+                    <button
+                      onClick={() => triggerVisionAnalysis()}
+                      disabled={isAnalyzingVision}
+                      className="w-full py-2.5 px-4 rounded-xl bg-[#2E7D32] hover:bg-[#123524] text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shadow-md shadow-[#2E7D32]/20"
+                    >
+                      {isAnalyzingVision ? (
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-3.5 h-3.5 text-[#8BC34A]" />
+                      )}
+                      <span>{isAnalyzingVision ? 'Analyzing Optical Metrics with Gemini...' : 'Trigger AI Vision Inspection'}</span>
+                    </button>
                   )}
-                  <span>{isAnalyzingVision ? 'Analyzing Optical Metrics...' : 'Trigger AI Vision Inspection'}</span>
-                </button>
+
+                  {/* Download Agronomist Certificate Button */}
+                  <button
+                    onClick={handleDownloadCertificate}
+                    disabled={isAnalyzingVision || !visionAnalysis}
+                    className="w-full py-2 px-3 rounded-xl bg-white hover:bg-emerald-50 text-[#123524] hover:text-[#2E7D32] border border-gray-200 hover:border-[#2E7D32] text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <FileDown className="w-3.5 h-3.5 text-[#2E7D32]" />
+                    <span>Download Agronomist QA Certificate (PDF)</span>
+                  </button>
+                </div>
               </div>
 
               {/* Analysis Metrics */}
               <div className="lg:col-span-7 space-y-4">
-                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-3 gap-2">
                   <div>
-                    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">
-                      Certified Agronomist Report
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">
+                        Certified Agronomist Report
+                      </span>
+                      {visionAnalysis?.is_live_gemini ? (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-[#2E7D32] bg-[#EAF6EC] px-2 py-0.5 rounded-full border border-[#2E7D32]/20">
+                          <Zap className="w-2.5 h-2.5 fill-current" />
+                          <span>Gemini 2.5 Live</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                          <span>Calibrated Optical Model</span>
+                        </span>
+                      )}
+                    </div>
                     <h5 className="font-black text-lg text-[#123524]">
-                      {visionSamples[selectedImageSample].analysis.crop}
+                      {visionAnalysis?.crop || (visionSamples[selectedImageSample].analysis as any).crop}
                     </h5>
                   </div>
-                  <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#EAF6EC] text-[#2E7D32] border border-[#2E7D32]/25">
-                    {visionSamples[selectedImageSample].analysis.grade}
+                  <span className="self-start sm:self-auto px-3 py-1 rounded-full text-xs font-extrabold bg-[#EAF6EC] text-[#2E7D32] border border-[#2E7D32]/25">
+                    {visionAnalysis?.grade || (visionSamples[selectedImageSample].analysis as any).grade}
                   </span>
                 </div>
 
@@ -674,35 +974,72 @@ export const FutureUpdatesPage: React.FC<FutureUpdatesPageProps> = ({ navigate }
                   <div className="py-12 text-center space-y-3">
                     <div className="w-8 h-8 border-3 border-[#2E7D32] border-t-transparent rounded-full animate-spin mx-auto" />
                     <p className="text-xs text-gray-500 font-medium">
-                      Gemini Vision is computing chlorophyll depth, surface defect ratio, and brix estimate...
+                      Gemini Vision is computing chlorophyll depth, surface defect ratio, brix estimate, and OCR stamps...
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-3 text-xs">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                       <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
-                        <span className="text-[10px] text-gray-500 font-bold uppercase block">Freshness Index</span>
-                        <strong className="text-sm font-black text-[#123524]">{visionSamples[selectedImageSample].analysis.freshness_score}</strong>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase block">Freshness</span>
+                        <strong className="text-sm font-black text-[#123524]">
+                          {visionAnalysis?.freshness_score || (visionSamples[selectedImageSample].analysis as any).freshness_score}
+                        </strong>
                       </div>
                       <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
-                        <span className="text-[10px] text-gray-500 font-bold uppercase block">Defect Percentage</span>
-                        <strong className="text-sm font-black text-[#2E7D32]">{visionSamples[selectedImageSample].analysis.surface_defects.split('(')[0]}</strong>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase block">Defect Ratio</span>
+                        <strong className="text-sm font-black text-[#2E7D32]">
+                          {visionAnalysis ? `${visionAnalysis.defect_percentage}%` : (visionSamples[selectedImageSample].analysis as any).surface_defects.split('(')[0]}
+                        </strong>
+                      </div>
+                      <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                        <span className="text-[10px] text-gray-500 font-bold uppercase block">Sugar Brix</span>
+                        <strong className="text-sm font-black text-[#123524]">
+                          {visionAnalysis?.sugar_brix_estimate || (visionSamples[selectedImageSample].analysis as any).sugar_brix_estimate}
+                        </strong>
+                      </div>
+                      <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                        <span className="text-[10px] text-gray-500 font-bold uppercase block">Shelf Life</span>
+                        <strong className="text-sm font-black text-[#2E7D32]">
+                          {visionAnalysis?.estimated_shelf_life_days ? `${visionAnalysis.estimated_shelf_life_days} Days` : '7 Days'}
+                        </strong>
                       </div>
                     </div>
 
-                    <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-100 space-y-1.5">
+                    <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-100 space-y-1">
                       <span className="text-[10px] text-gray-500 font-bold uppercase block">Defect Analysis Details</span>
                       <p className="text-gray-700 font-medium">
-                        {visionSamples[selectedImageSample].analysis.surface_defects}
+                        {visionAnalysis?.surface_defects || (visionSamples[selectedImageSample].analysis as any).surface_defects}
+                      </p>
+                    </div>
+
+                    {/* OCR Character Recognition & Tag Output */}
+                    <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-100 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-gray-500 font-bold uppercase block">
+                          OCR Optical Text & Label Detection
+                        </span>
+                        <span className="text-[9px] font-mono text-[#2E7D32] bg-[#EAF6EC] px-1.5 py-0.5 rounded">
+                          OCR Extractor
+                        </span>
+                      </div>
+                      <p className="text-gray-800 font-mono text-[11px] bg-white p-2 rounded-lg border border-gray-200">
+                        {visionAnalysis?.ocr_detected_text || 'AUR-QC-PASSED • CRATE-402 • LOT #88'}
                       </p>
                     </div>
 
                     <div className="p-3.5 rounded-xl bg-[#EAF6EC] border border-[#2E7D32]/20 space-y-1">
                       <span className="text-[10px] text-[#2E7D32] font-bold uppercase block">Recommended Packaging Action</span>
                       <p className="text-[#123524] font-extrabold text-xs">
-                        ✓ {visionSamples[selectedImageSample].analysis.recommended_action}
+                        ✓ {visionAnalysis?.recommended_action || (visionSamples[selectedImageSample].analysis as any).recommended_action}
                       </p>
                     </div>
+
+                    {visionAnalysis?.agronomist_summary && (
+                      <p className="text-[11px] text-gray-500 italic bg-white p-2.5 rounded-xl border border-gray-100">
+                        Agronomist Evaluation: "{visionAnalysis.agronomist_summary}"
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -790,6 +1127,80 @@ export const FutureUpdatesPage: React.FC<FutureUpdatesPageProps> = ({ navigate }
         </div>
 
       </div>
+
+      {/* Gemini API Key Configuration Modal */}
+      {showApiKeyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-[#EAF6EC] text-[#2E7D32] flex items-center justify-center font-bold">
+                  <Key className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-[#123524]">Gemini API Key Settings</h3>
+                  <p className="text-[11px] text-gray-500">Google Gemini 2.5 Multi-Modal Vision</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowApiKeyModal(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-100 space-y-1.5 text-xs text-gray-600">
+              <div className="flex items-center justify-between font-bold text-[#123524]">
+                <span>Current Active Engine:</span>
+                <span className="text-[#2E7D32] font-extrabold">{apiStatus.engine}</span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-gray-500">
+                You can optionally paste your free Gemini API key from Google AI Studio. If left blank, Aurbana runs its calibrated agronomist optical inspection engine.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-[#123524] block">
+                Google Gemini API Key:
+              </label>
+              <input
+                type="password"
+                placeholder="AIzaSy..."
+                value={userApiKeyInput}
+                onChange={(e) => setUserApiKeyInput(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20 text-xs font-mono outline-hidden"
+              />
+            </div>
+
+            {apiKeySaveSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2">
+                <Check className="w-4 h-4 text-emerald-600" />
+                <span>API Key saved successfully! Live Gemini model activated.</span>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                onClick={handleSaveApiKey}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-[#2E7D32] hover:bg-[#123524] text-white text-xs font-bold transition-all cursor-pointer shadow-md"
+              >
+                Save & Connect
+              </button>
+              <button
+                onClick={() => {
+                  setUserApiKeyInput('');
+                  GeminiVisionService.setStoredApiKey('');
+                  GeminiVisionService.checkApiStatus().then(setApiStatus);
+                }}
+                className="py-2.5 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition-all cursor-pointer"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

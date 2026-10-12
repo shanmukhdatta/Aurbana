@@ -4,13 +4,14 @@ import path from 'path';
 import { INITIAL_PRODUCE_RECORDS, MOCK_FARMS } from '../src/data/mockProduce.js';
 import { normalizeProduceId, findProduceIndex } from '../src/utils/idNormalizer.js';
 import { getProduceImage } from '../src/utils/produceImageHelper.js';
+import { analyzeProduceWithGemini } from '../src/services/geminiVisionBackend.js';
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 
 const DATA_FILE = path.join('/tmp', 'produce_store.json');
 
-type ProduceRecord = (typeof INITIAL_PRODUCE_RECORDS)[number];
+import { ProduceRecord } from '../src/types.js';
 
 function normalizeRecord(record: Partial<ProduceRecord>, index = 0): ProduceRecord {
   const now = new Date().toISOString();
@@ -44,6 +45,7 @@ function normalizeRecord(record: Partial<ProduceRecord>, index = 0): ProduceReco
     grade: record.grade,
     shelf_life_days: record.shelf_life_days,
     temp_celsius: record.temp_celsius,
+    vision_analysis: record.vision_analysis,
     journey: record.journey || [],
   };
 }
@@ -82,6 +84,51 @@ app.get('/api/health', (_req, res) => {
     recordsCount: records.length,
     environment: 'vercel-serverless',
   });
+});
+
+app.post('/api/gemini/analyze-produce', async (req, res) => {
+  try {
+    const { image, produceName, apiKey } = req.body;
+    if (!image) {
+      return res.status(400).json({ error: 'Missing image payload (base64 or URL required)' });
+    }
+
+    const result = await analyzeProduceWithGemini({
+      image,
+      produceName,
+      apiKey: apiKey || (req.headers['x-gemini-api-key'] as string | undefined),
+    });
+
+    res.json(result);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Error analyzing produce';
+    console.error('Gemini vision endpoint error:', err);
+    res.status(500).json({ error: message });
+  }
+});
+
+app.get('/api/gemini/status', (_req, res) => {
+  const hasKey = Boolean(process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_API_KEY);
+  res.json({
+    configured: hasKey,
+    model: 'gemini-2.5-flash',
+    engine: hasKey ? 'Google Gemini 2.5 Multi-Modal Vision' : 'Aurbana Certified Agronomist Optical Engine (Fallback)'
+  });
+});
+
+app.post('/api/gemini/set-key', (req, res) => {
+  try {
+    const { apiKey } = req.body;
+    if (!apiKey || typeof apiKey !== 'string') {
+      return res.status(400).json({ error: 'Valid apiKey string required' });
+    }
+    const cleanKey = apiKey.trim();
+    process.env.GEMINI_API_KEY = cleanKey;
+    res.json({ success: true, message: 'Gemini API key configured' });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Error setting API key';
+    res.status(500).json({ error: message });
+  }
 });
 
 app.get('/api/produce', (_req, res) => {

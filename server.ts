@@ -6,12 +6,13 @@ import { createServer as createViteServer } from 'vite';
 import { INITIAL_PRODUCE_RECORDS, MOCK_FARMS } from './src/data/mockProduce.js';
 import { normalizeProduceId, findProduceIndex } from './src/utils/idNormalizer.js';
 import { getProduceImage } from './src/utils/produceImageHelper.js';
+import { analyzeProduceWithGemini } from './src/services/geminiVisionBackend.js';
 
 const DATA_FILE = path.join(process.cwd(), 'produce_store.json');
 const PORT = Number(process.env.PORT) || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 
-type ProduceRecord = (typeof INITIAL_PRODUCE_RECORDS)[number];
+import { ProduceRecord } from './src/types.js';
 
 function normalizeRecord(record: Partial<ProduceRecord>, index = 0): ProduceRecord {
   const now = new Date().toISOString();
@@ -45,6 +46,7 @@ function normalizeRecord(record: Partial<ProduceRecord>, index = 0): ProduceReco
     grade: record.grade,
     shelf_life_days: record.shelf_life_days,
     temp_celsius: record.temp_celsius,
+    vision_analysis: record.vision_analysis,
     journey: record.journey || [],
   };
 }
@@ -107,6 +109,63 @@ async function startServer() {
       dataFile: DATA_FILE,
       environment: isProduction ? 'production' : 'development',
     });
+  });
+
+  // Gemini AI Vision Quality Grading Endpoint
+  app.post('/api/gemini/analyze-produce', async (req, res) => {
+    try {
+      const { image, produceName, apiKey } = req.body;
+      if (!image) {
+        return res.status(400).json({ error: 'Missing image payload (base64 or URL required)' });
+      }
+
+      const result = await analyzeProduceWithGemini({
+        image,
+        produceName,
+        apiKey: apiKey || (req.headers['x-gemini-api-key'] as string | undefined),
+      });
+
+      res.json(result);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error analyzing produce';
+      console.error('Gemini vision endpoint error:', err);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  app.get('/api/gemini/status', (_req, res) => {
+    const hasKey = Boolean(process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_API_KEY);
+    res.json({
+      configured: hasKey,
+      model: 'gemini-2.5-flash',
+      engine: hasKey ? 'Google Gemini 2.5 Multi-Modal Vision' : 'Aurbana Certified Agronomist Optical Engine (Fallback)'
+    });
+  });
+
+  app.post('/api/gemini/set-key', (req, res) => {
+    try {
+      const { apiKey } = req.body;
+      if (!apiKey || typeof apiKey !== 'string') {
+        return res.status(400).json({ error: 'Valid apiKey string required' });
+      }
+      const cleanKey = apiKey.trim();
+      process.env.GEMINI_API_KEY = cleanKey;
+      const envPath = path.join(process.cwd(), '.env');
+      let envContent = '';
+      if (fs.existsSync(envPath)) {
+        envContent = fs.readFileSync(envPath, 'utf-8');
+      }
+      if (envContent.includes('GEMINI_API_KEY=')) {
+        envContent = envContent.replace(/GEMINI_API_KEY=.*/g, `GEMINI_API_KEY="${cleanKey}"`);
+      } else {
+        envContent += `\nGEMINI_API_KEY="${cleanKey}"\n`;
+      }
+      fs.writeFileSync(envPath, envContent.trim() + '\n', 'utf-8');
+      res.json({ success: true, message: 'Gemini API key configured successfully' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error setting API key';
+      res.status(500).json({ error: message });
+    }
   });
 
   app.get('/api/produce', (_req, res) => {

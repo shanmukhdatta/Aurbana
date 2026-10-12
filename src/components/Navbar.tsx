@@ -112,17 +112,24 @@ export const Navbar: React.FC<NavbarProps> = ({
               About
             </button>
             <button
-              onClick={() => handleNav('/future-updates')}
+              onClick={() => {
+                if (currentRoute === '/') {
+                  const el = document.getElementById('home-gemini-vision-section');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                  handleNav('/');
+                  setTimeout(() => {
+                    const el = document.getElementById('home-gemini-vision-section');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }, 120);
+                }
+              }}
               id="nav-ai-btn"
-              title="Future AI Architecture & Roadmap"
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs sm:text-[13px] font-black transition-all cursor-pointer ${
-                currentRoute === '/future-updates' || currentRoute === '/roadmap'
-                  ? 'bg-[#123524] text-[#8BC34A] shadow-xs' 
-                  : 'text-gray-700 hover:text-[#123524] hover:bg-white/50'
-              }`}
+              title="Instant AI Camera Vision Quality Grading"
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs sm:text-[13px] font-black transition-all cursor-pointer bg-emerald-50 hover:bg-[#2E7D32] text-[#2E7D32] hover:text-white border border-[#2E7D32]/30 shadow-2xs"
             >
-              <Sparkles className="w-3.5 h-3.5 text-[#2E7D32]" />
-              <span>AI</span>
+              <Sparkles className="w-3.5 h-3.5 fill-current" />
+              <span>AI Vision QA</span>
             </button>
           </nav>
 
@@ -293,17 +300,27 @@ export const Navbar: React.FC<NavbarProps> = ({
               About Aurbana
             </button>
             <button
-              onClick={() => handleNav('/future-updates')}
-              className={`p-2.5 text-left rounded-lg text-sm font-semibold flex items-center justify-between ${
-                currentRoute === '/future-updates' || currentRoute === '/roadmap' ? 'bg-[#EAF6EC] text-[#123524]' : 'text-gray-700'
-              }`}
+              onClick={() => {
+                if (currentRoute === '/') {
+                  const el = document.getElementById('home-gemini-vision-section');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                  handleNav('/');
+                  setTimeout(() => {
+                    const el = document.getElementById('home-gemini-vision-section');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }, 120);
+                }
+                setMobileMenuOpen(false);
+              }}
+              className="p-2.5 text-left rounded-lg text-sm font-bold flex items-center justify-between bg-emerald-50 text-[#2E7D32] border border-[#2E7D32]/25 col-span-2"
             >
               <span className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#2E7D32]" />
-                <span>AI Architecture</span>
+                <Sparkles className="w-4 h-4 text-[#2E7D32]" />
+                <span>🤖 AI Vision Quality Inspection</span>
               </span>
-              <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-[#EAF6EC] text-[#2E7D32]">
-                New
+              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-[#2E7D32] text-white">
+                Live
               </span>
             </button>
             <button

@@ -586,6 +586,60 @@ export const PublicProducePage: React.FC<PublicProducePageProps> = ({
                   </div>
                 </div>
 
+                {/* Certified Gemini Vision Optical QA Report */}
+                {record.vision_analysis && (
+                  <div className="p-5 rounded-2xl bg-[#F8FAF8] border-2 border-[#2E7D32]/25 space-y-3.5 shadow-2xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-[#2E7D32] flex items-center justify-center text-white">
+                          <Activity className="w-4 h-4 text-[#8BC34A]" />
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                            Optical QA Laboratory Inspection
+                          </div>
+                          <div className="text-xs font-black text-[#123524]">
+                            Google Gemini Multi-Modal Vision Verified
+                          </div>
+                        </div>
+                      </div>
+                      <span className="self-start sm:self-auto px-3 py-1 rounded-full text-xs font-extrabold bg-[#EAF6EC] text-[#2E7D32] border border-[#2E7D32]/30">
+                        {record.vision_analysis.grade}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                      <div className="p-2.5 rounded-xl bg-white border border-gray-200">
+                        <span className="text-[9px] text-gray-400 font-bold uppercase block">Freshness</span>
+                        <strong className="text-sm font-black text-[#123524]">{record.vision_analysis.freshness_score}</strong>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-white border border-gray-200">
+                        <span className="text-[9px] text-gray-400 font-bold uppercase block">Defect Ratio</span>
+                        <strong className="text-sm font-black text-[#2E7D32]">{record.vision_analysis.defect_percentage}%</strong>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-white border border-gray-200">
+                        <span className="text-[9px] text-gray-400 font-bold uppercase block">Sugar Brix</span>
+                        <strong className="text-sm font-black text-[#123524]">{record.vision_analysis.sugar_brix_estimate}</strong>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-white border border-gray-200">
+                        <span className="text-[9px] text-gray-400 font-bold uppercase block">Shelf Life</span>
+                        <strong className="text-sm font-black text-[#2E7D32]">{record.vision_analysis.estimated_shelf_life_days} Days</strong>
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-gray-700 bg-white p-3 rounded-xl border border-gray-100 space-y-1">
+                      <div className="font-bold text-[#123524]">
+                        Defect Pathology: <span className="font-normal text-gray-600">{record.vision_analysis.surface_defects}</span>
+                      </div>
+                      {record.vision_analysis.ocr_detected_text && (
+                        <div className="font-mono text-[11px] text-[#2E7D32] pt-1">
+                          OCR Scanned Stamp: {record.vision_analysis.ocr_detected_text}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Batch Specifics Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div className="flex items-center justify-between p-3.5 rounded-xl bg-gray-50 border border-gray-100">
